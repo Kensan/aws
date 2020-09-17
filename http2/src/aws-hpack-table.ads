@@ -1,0 +1,90 @@
+------------------------------------------------------------------------------
+--                              Ada Web Server                              --
+--                                                                          --
+--                      Copyright (C) 2021, AdaCore                         --
+--                                                                          --
+--  This library is free software;  you can redistribute it and/or modify   --
+--  it under terms of the  GNU General Public License  as published by the  --
+--  Free Software  Foundation;  either version 3,  or (at your  option) any --
+--  later version. This library is distributed in the hope that it will be  --
+--  useful, but WITHOUT ANY WARRANTY;  without even the implied warranty of --
+--  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.                    --
+--                                                                          --
+--  As a special exception under Section 7 of GPL version 3, you are        --
+--  granted additional permissions described in the GCC Runtime Library     --
+--  Exception, version 3.1, as published by the Free Software Foundation.   --
+--                                                                          --
+--  You should have received a copy of the GNU General Public License and   --
+--  a copy of the GCC Runtime Library Exception along with this program;    --
+--  see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see   --
+--  <http://www.gnu.org/licenses/>.                                         --
+--                                                                          --
+--  As a special exception, if other files instantiate generics from this   --
+--  unit, or you link this unit with other files to produce an executable,  --
+--  this  unit  does not  by itself cause  the resulting executable to be   --
+--  covered by the GNU General Public License. This exception does not      --
+--  however invalidate any other reasons why the executable file  might be  --
+--  covered by the  GNU Public License.                                     --
+------------------------------------------------------------------------------
+
+private with Ada.Containers.Indefinite_Vectors;
+private with Ada.Containers.Indefinite_Ordered_Maps;
+
+private package AWS.HPACK.Table is
+
+   type Object is tagged private;
+
+   type Name_Value (N_Length : Positive; V_Length : Natural) is record
+      Name  : String (1 .. N_Length);
+      Value : String (1 .. V_Length);
+   end record;
+
+   procedure Insert (Self : in out Object; Name, Value : String);
+
+   function Get_Name (Self : Object; Index : Positive) return String;
+
+   function Get_Name_Value (Self : Object; Index : Positive) return Name_Value;
+
+   function Get_Name_Index (Self : Object; Name : String) return Positive;
+
+   procedure Init (Self : in out Object);
+
+   procedure Dump (Self : Object);
+
+private
+
+   use Ada;
+
+   package Index_NV is
+     new Containers.Indefinite_Vectors (Positive, Name_Value);
+
+   type Ids is record
+      Index : Positive;
+      Rank  : Positive;
+   end record;
+
+   package NV_Index is
+     new Containers.Indefinite_Ordered_Maps (String, Ids);
+
+   package Name_Index is
+     new Containers.Indefinite_Ordered_Maps (String, Name_Value);
+
+   type Static_Table is record
+      T_IN : Index_NV.Vector;
+      T_NI : NV_Index.Map;
+   end record;
+
+   type Dynamic_Table is record
+      T_IN   : Index_NV.Vector;
+      T_NI   : NV_Index.Map;
+      Size   : Natural := 0;
+      Length : Natural := 0;
+      Rank   : Natural := 0;
+   end record;
+
+   type Object is tagged record
+      Static  : Static_Table;
+      Dynamic : Dynamic_Table;
+   end record;
+
+end AWS.HPACK.Table;

@@ -1,5 +1,0 @@
-aggregate project ahttp is
-   for External("PRJ_TARGET") use "UNIX";
-   for External("TARGET") use "x86_64-linux-gnu";
-   for Project_Files use ("http2.gpr", "prj.gpr");
-end ahttp;
