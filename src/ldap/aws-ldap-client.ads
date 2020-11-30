@@ -323,6 +323,23 @@ package AWS.LDAP.Client is
    --  Breaks up an entry name into its component parts. If No_Types is set to
    --  True the types information ("cn=") won't be included.
 
+   ---------
+   -- URL --
+   ---------
+
+   type LDAP_URL_Descriptor (Attr_Size : Natural) is record
+      Scheme : Unbounded_String;
+      Host   : Unbounded_String;
+      Port   : Positive;
+      Dn     : Unbounded_String;
+      Attrs  : Attribute_Set (1 .. Attr_Size);
+      Scope  : Scope_Type;
+      Filter : Unbounded_String;
+   end record;
+
+   --  Parses the given URL and returns the corresponding URL descriptor.
+   function Parse (URL : String) return LDAP_URL_Descriptor;
+
 private
 
    Null_Set : constant String_Set (1 .. 0) :=

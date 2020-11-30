@@ -83,6 +83,9 @@ package body AWS.LDAP.Client is
    procedure Check_Handle (Dir : Directory) with Inline;
    --  Raises LDAP_Error if Dir is Null_Directory
 
+   function To_Ada (C_Scope : IC.int) return Scope_Type;
+   --  Map C scope values to corresponding Ada scope type.
+
    ---------
    -- Add --
    ---------
@@ -744,6 +747,50 @@ package body AWS.LDAP.Client is
       return Attrib ("ou", Val);
    end ou;
 
+   -----------
+   -- Parse --
+   -----------
+
+   function Parse (URL : String) return LDAP_URL_Descriptor is
+      use type Thin.Attribute_Set_Access;
+
+      function U (S : String) return Unbounded_String
+                  renames To_Unbounded_String;
+
+      C_URL  : IC.Strings.chars_ptr := IC.Strings.New_String (Str => URL);
+      Res    : IC.int;
+      C_Desc : access Thin.ldap_url_desc;
+      Attr_Size : Natural := 0;
+   begin
+      Res := Thin.ldap_url_parse (url   => C_URL,
+                                  ludpp => C_Desc'Address);
+      IC.Strings.Free (Item => C_URL);
+      if Res /= 0 then
+         Raise_Error (Res, "Parsing URL failed");
+      end if;
+
+      if C_Desc.lud_attrs /= null then
+         Attr_Size
+           :=  Natural (Thin.ldap_count_values (V => C_Desc.lud_attrs));
+      end if;
+
+      return Desc : LDAP_URL_Descriptor (Attr_Size => Attr_Size) do
+         Desc.Scheme := U (IC.Strings.Value (Item => C_Desc.lud_scheme));
+         Desc.Host := U (IC.Strings.Value (Item => C_Desc.lud_host));
+         Desc.Port := Positive (C_Desc.lud_port);
+         Desc.Dn := U (IC.Strings.Value (Item => C_Desc.lud_dn));
+         Desc.Scope := To_Ada (C_Scope => C_Desc.lud_scope);
+         Desc.Filter := U (IC.Strings.Value (Item => C_Desc.lud_filter));
+         for I in Desc.Attrs'Range loop
+            Desc.Attrs (I) := U (Value
+              (Item => Thin.Item (Set   => C_Desc.lud_attrs,
+                                  Index => IC.int (I))));
+         end loop;
+
+         Thin.ldap_free_urldesc (ludp => C_Desc);
+      end return;
+   end Parse;
+
    -----------------
    -- Raise_Error --
    -----------------
@@ -850,6 +897,29 @@ package body AWS.LDAP.Client is
    begin
       return Attrib ("telephoneNumber", Val);
    end telephoneNumber;
+
+   ------------
+   -- To_Ada --
+   ------------
+
+   function To_Ada (C_Scope : IC.int) return Scope_Type
+   is
+      Result : AWS.LDAP.Client.Scope_Type;
+   begin
+      case C_Scope is
+         when AWS.LDAP.Thin.LDAP_SCOPE_DEFAULT =>
+            Result := AWS.LDAP.Client.LDAP_Scope_Default;
+         when AWS.LDAP.Thin.LDAP_SCOPE_BASE =>
+            Result := AWS.LDAP.Client.LDAP_Scope_Base;
+         when AWS.LDAP.Thin.LDAP_SCOPE_ONELEVEL =>
+            Result := AWS.LDAP.Client.LDAP_Scope_One_Level;
+         when AWS.LDAP.Thin.LDAP_SCOPE_SUBTREE =>
+            Result := AWS.LDAP.Client.LDAP_Scope_Subtree;
+         when others =>
+            Result := AWS.LDAP.Client.LDAP_Scope_Default;
+      end case;
+      return Result;
+   end To_Ada;
 
    ----------
    -- To_C --

@@ -751,6 +751,30 @@ package AWS.LDAP.Thin is
    procedure ber_free (BER : BerElement; fbuf : C.int)
      with Import, Convention => C;
 
+   type ldap_url_desc;
+   type ldap_url_desc is record
+      lud_next      : access ldap_url_desc;
+      lud_scheme    : C.Strings.chars_ptr;
+      lud_host      : C.Strings.chars_ptr;
+      lud_port      : aliased C.int;
+      lud_dn        : C.Strings.chars_ptr;
+      lud_attrs     : Attribute_Set_Access;
+      lud_scope     : aliased C.int;
+      lud_filter    : C.Strings.chars_ptr;
+      lud_exts      : System.Address;
+      lud_crit_exts : aliased C.int;
+   end record
+     with Convention => C;
+
+   function ldap_url_parse
+     (url   : C.Strings.chars_ptr;
+      ludpp : System.Address)
+      return C.int
+     with Import, Convention => C;
+
+   procedure ldap_free_urldesc (ludp : access ldap_url_desc)
+     with Import, Convention => C;
+
 private
 
    type LDAP_Type   is new System.Address;
