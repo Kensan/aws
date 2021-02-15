@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              Ada Web Server                              --
 --                                                                          --
---                     Copyright (C) 2000-2017, AdaCore                     --
+--                     Copyright (C) 2000-2021, AdaCore                     --
 --                                                                          --
 --  This library is free software;  you can redistribute it and/or modify   --
 --  it under terms of the  GNU General Public License  as published by the  --
@@ -575,6 +575,13 @@ package body AWS.Status.Set is
       D.Method_String := To_Unbounded_String (Method);
       D.HTTP_Version  := To_Unbounded_String (HTTP_Version);
 
+      --  At this stage it should be HTTP_11, there is no
+      --  other choices.
+
+      if HTTP_Version = HTTP_11 then
+         D.Protocol := HTTP_1;
+      end if;
+
       --  Parse URI and keep parameters case sensitivity flag
 
       AWS.URL.Set.Parse (D.URI, URI, False, False);
@@ -781,6 +788,18 @@ package body AWS.Status.Set is
                  and then D.Session_Private /= Null_Unbounded_String;
             end;
          end loop;
+
+         if AWS.Headers.Exist (D.Header, Messages.Upgrade_Token) then
+            declare
+               Upgrade : constant String :=
+                            AWS.Headers.Get
+                              (D.Header, Messages.Upgrade_Token);
+            begin
+               if Upgrade = "h2c" then
+                  D.Protocol := Upgrade_1_To_2;
+               end if;
+            end;
+         end if;
 
          --  Now double check that the session id is valid and has not been
          --  compromised.

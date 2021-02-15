@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              Ada Web Server                              --
 --                                                                          --
---                     Copyright (C) 2000-2018, AdaCore                     --
+--                     Copyright (C) 2000-2021, AdaCore                     --
 --                                                                          --
 --  This library is free software;  you can redistribute it and/or modify   --
 --  it under terms of the  GNU General Public License  as published by the  --
@@ -824,6 +824,15 @@ package body AWS.Status is
    begin
       return D.Socket.all;
    end Socket;
+
+   -----------
+   -- State --
+   -----------
+
+   function State (D : Data) return Protocol_State is
+   begin
+      return D.Protocol;
+   end State;
 
    -----------------------
    -- Transfer_Encoding --
