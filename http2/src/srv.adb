@@ -31,17 +31,25 @@ with Ada.Integer_Text_IO;
 with Ada.Streams;
 with Ada.Text_IO;
 
+with AWS.Config.Set;
+with AWS.Headers;
 with AWS.Net.Buffered;
 with AWS.Net.Std;
+with AWS.Response;
+with AWS.Server;
+with AWS.Status;
 with AWS.Translator;
 
 with AWS.HPACK.Huffman;
+with AWS.HTTP2.Frame;
 
 with GNAT.OS_Lib;
 
 procedure Srv is
+
    use Ada;
    use Ada.Streams;
+   use Ada.Text_IO;
    use AWS;
 
    task Client is
@@ -53,6 +61,20 @@ procedure Srv is
    --  Get response server until empty line
 
    procedure Check_Huffman (Str : String);
+
+   function CB (Request : AWS.Status.Data) return AWS.Response.Data is
+      URI : constant String := AWS.Status.URI (Request);
+      H   : Headers.List := AWS.Status.Header (Request);
+   begin
+      Text_IO.Put_Line ("CB headers:");
+      for K in 1 .. H.Count loop
+         Put_Line (K'Img & " "
+                   & String'(H.Get_Name (K))
+                   & " = " & String'(H.Get_Value (K)));
+      end loop;
+
+      return AWS.Response.Build ("text/html", "Hello !");
+   end CB;
 
    procedure Check_Huffman (Str : String) is
       E : constant Stream_Element_Array := AWS.HPACK.Huffman.Encode (Str);
@@ -158,30 +180,53 @@ procedure Srv is
       accept Stop;
    end Client;
 
+   procedure Local_Check is
+   begin
+      Check_Huffman ("www.example.com");
+      Check_Huffman ("some other string");
+      Check_Huffman ("0");
+
+      Net.Bind (Srv_Sock, 3128, Reuse_Address => True);
+      Net.Listen (Srv_Sock);
+
+      Client.Start;
+
+      Net.Accept_Socket (Srv_Sock, New_Sock);
+
+      Text_IO.Put_Line ("Socket accepted...");
+
+      AWS.HPack.Get_Header (New_Sock);
+
+      Client.Stop;
+
+      Get_Response (New_Sock);
+   end Local_Check;
+
    Buffer   : Stream_Element_Array (1 .. 200);
    Last     : Stream_Element_Offset := 0;
 
+   WS     : Server.HTTP;
+   Config : AWS.Config.Object;
+
 begin
-   Check_Huffman ("www.example.com");
-   Check_Huffman ("some other string");
-   Check_Huffman ("0");
+   Text_IO.Put_Line ("AWS " & AWS.Version);
+   Text_IO.Put_Line ("Press Q to exit...");
 
-   GNAT.OS_Lib.OS_Exit (1);
+   AWS.Config.Set.Reuse_Address (Config, True);
+   AWS.Config.Set.Server_Host (Config, "127.0.0.1");
+   AWS.Config.Set.Server_Port (Config, 1234);
+   AWS.Config.Set.Server_Name (Config, "Srv HTTP/2");
+   AWS.Config.Set.Max_Connection (Config, 5);
+   AWS.Config.Set.Security (Config, True);
 
-   Net.Bind (Srv_Sock, 3128, Reuse_Address => True);
-   Net.Listen (Srv_Sock);
+   AWS.Server.Start
+     (WS,
+      Config   => Config,
+      Callback => CB'Unrestricted_Access);
 
-   Client.Start;
+   Server.Wait (AWS.Server.Q_Key_Pressed);
 
-   Net.Accept_Socket (Srv_Sock, New_Sock);
-
-   Text_IO.Put_Line ("Socket accepted...");
-
-   AWS.HPack.Get_Header (New_Sock);
-
-   Client.Stop;
-
-   Get_Response (New_Sock);
+   AWS.Server.Shutdown (WS);
 
 exception
    when E : others =>
