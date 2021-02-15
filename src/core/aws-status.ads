@@ -64,7 +64,7 @@ package AWS.Status is
 
    type Authorization_Type is (None, Basic, Digest);
 
-   type Protocol_State is (HTTP_1, Upgrade_1_To_2, HTTP_2);
+   type Protocol_State is (HTTP_1, Upgrade_To_HTTP_2, HTTP_2);
    --  Protocoal status and upgrade request
 
    ------------------
@@ -79,7 +79,7 @@ package AWS.Status is
    --  for an extension-method, ie a method that is not already predefined
    --  in the RFC 2616.
 
-   function State        (D : Data) return Protocol_State with Inline;
+   function Protocol     (D : Data) return Protocol_State with Inline;
    --  Get the current state of the protocol
 
    function URI          (D : Data) return String with Inline;

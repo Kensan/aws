@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              Ada Web Server                              --
 --                                                                          --
---                     Copyright (C) 2000-2019, AdaCore                     --
+--                     Copyright (C) 2000-2021, AdaCore                     --
 --                                                                          --
 --  This library is free software;  you can redistribute it and/or modify   --
 --  it under terms of the  GNU General Public License  as published by the  --
@@ -56,7 +56,10 @@ package body AWS.Server is
    --  Start web server with current configuration
 
    procedure Protocol_Handler (LA : in out Line_Attribute_Record);
-   --  Handle the lines, this is where all the HTTP protocol is defined
+   --  Handle the lines, this is where all the HTTP/1.1 protocol is defined
+
+   procedure Protocol_Handler_V2 (LA : in out Line_Attribute_Record);
+   --  Handle the lines, this is where all the HTTP/2 protocol is defined
 
    function Accept_Socket_Serialized
      (Server : not null access HTTP)
@@ -383,6 +386,9 @@ package body AWS.Server is
    ----------------------
 
    procedure Protocol_Handler (LA : in out Line_Attribute_Record) is separate;
+
+   procedure Protocol_Handler_V2
+     (LA : in out Line_Attribute_Record) is separate;
 
    ------------------
    -- Session_Name --

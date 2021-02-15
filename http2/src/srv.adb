@@ -27,6 +27,7 @@
 --  covered by the  GNU Public License.                                     --
 ------------------------------------------------------------------------------
 
+with Ada.Exceptions;
 with Ada.Integer_Text_IO;
 with Ada.Streams;
 with Ada.Text_IO;
@@ -48,8 +49,10 @@ with GNAT.OS_Lib;
 procedure Srv is
 
    use Ada;
+   use Ada.Exceptions;
    use Ada.Streams;
    use Ada.Text_IO;
+
    use AWS;
 
    task Client is
@@ -202,8 +205,8 @@ procedure Srv is
       Get_Response (New_Sock);
    end Local_Check;
 
-   Buffer   : Stream_Element_Array (1 .. 200);
-   Last     : Stream_Element_Offset := 0;
+   Buffer : Stream_Element_Array (1 .. 200);
+   Last   : Stream_Element_Offset := 0;
 
    WS     : Server.HTTP;
    Config : AWS.Config.Object;
@@ -212,12 +215,14 @@ begin
    Text_IO.Put_Line ("AWS " & AWS.Version);
    Text_IO.Put_Line ("Press Q to exit...");
 
+   --  AWS.Headers.Debug (True);
+
    AWS.Config.Set.Reuse_Address (Config, True);
    AWS.Config.Set.Server_Host (Config, "127.0.0.1");
    AWS.Config.Set.Server_Port (Config, 1234);
    AWS.Config.Set.Server_Name (Config, "Srv HTTP/2");
    AWS.Config.Set.Max_Connection (Config, 5);
-   AWS.Config.Set.Security (Config, True);
+   AWS.Config.Set.Security (Config, False);
 
    AWS.Server.Start
      (WS,
@@ -230,5 +235,5 @@ begin
 
 exception
    when E : others =>
-      Text_IO.Put_Line ("srv crashed !!!!");
+      Text_IO.Put_Line ("srv crashed !!!!" & Exception_Information (E));
 end Srv;

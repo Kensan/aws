@@ -684,6 +684,15 @@ package body AWS.Status is
       return Best_Encoding;
    end Preferred_Coding;
 
+   --------------
+   -- Protocol --
+   --------------
+
+   function Protocol (D : Data) return Protocol_State is
+   begin
+      return D.Protocol;
+   end Protocol;
+
    ---------------
    -- Read_Body --
    ---------------
@@ -824,15 +833,6 @@ package body AWS.Status is
    begin
       return D.Socket.all;
    end Socket;
-
-   -----------
-   -- State --
-   -----------
-
-   function State (D : Data) return Protocol_State is
-   begin
-      return D.Protocol;
-   end State;
 
    -----------------------
    -- Transfer_Encoding --

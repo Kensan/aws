@@ -395,6 +395,15 @@ package body AWS.Status.Set is
       AWS.URL.Set.Parameters (D.URI'Access).all.Add (D.Binary_Data.all);
    end Parameters_From_Body;
 
+   --------------
+   -- Protocol --
+   --------------
+
+   procedure Protocol (D : in out Data; State : Protocol_State) is
+   begin
+      D.Protocol := State;
+   end Protocol;
+
    -----------
    -- Query --
    -----------
@@ -796,7 +805,7 @@ package body AWS.Status.Set is
                               (D.Header, Messages.Upgrade_Token);
             begin
                if Upgrade = "h2c" then
-                  D.Protocol := Upgrade_1_To_2;
+                  D.Protocol := Upgrade_To_HTTP_2;
                end if;
             end;
          end if;

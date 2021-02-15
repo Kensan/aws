@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              Ada Web Server                              --
 --                                                                          --
---                     Copyright (C) 2005-2020, AdaCore                     --
+--                     Copyright (C) 2005-2021, AdaCore                     --
 --                                                                          --
 --  This library is free software;  you can redistribute it and/or modify   --
 --  it under terms of the  GNU General Public License  as published by the  --
@@ -114,6 +114,8 @@ package body AWS.Server.HTTP_Utils is
       ------------------
 
       procedure Build_Answer is
+         use type Status.Protocol_State;
+
          URL : constant AWS.URL.Object := AWS.Status.URI (C_Stat);
          URI : constant String         := AWS.URL.Abs_Path (URL);
       begin
@@ -190,6 +192,20 @@ package body AWS.Server.HTTP_Utils is
                        (HTTP_Server.Dispatcher.all, C_Stat);
 
                      HTTP_Server.Dispatcher_Sem.Release_Read;
+
+                     --  Switching protocol if needed
+
+                     if Status.Protocol (C_Stat)
+                       = Status.Upgrade_To_HTTP_2
+                     then
+                        Response.Set.Status_Code (Answer, Messages.S101);
+
+                        Response.Set.Add_Header
+                          (Answer, Messages.Connection_Token, "Upgrade");
+                        Response.Set.Add_Header
+                          (Answer, Messages.Upgrade_Token, "h2c");
+                     end if;
+
                   exception
                      when others =>
                         HTTP_Server.Dispatcher_Sem.Release_Read;
