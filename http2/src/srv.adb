@@ -190,7 +190,7 @@ procedure Srv is
       Check_Huffman ("some other string");
       Check_Huffman ("0");
 
-      Net.Bind (Srv_Sock, 3128, Reuse_Address => True);
+      Net.Bind (Srv_Sock, 1234, Reuse_Address => True);
       Net.Listen (Srv_Sock);
 
       Client.Start;
@@ -199,7 +199,9 @@ procedure Srv is
 
       Text_IO.Put_Line ("Socket accepted...");
 
-      AWS.HPack.Get_Header (New_Sock);
+      --      AWS.HPack.Get_Header (New_Sock);
+
+      AWS.HTTP2.Frame.Read (New_Sock);
 
       Client.Stop;
 
@@ -215,7 +217,7 @@ procedure Srv is
       L : constant := 10;
       C : Stream_Element_Offset := Data'First;
       N : Stream_Element_Offset :=
-            Stream_Element_Offset'Min (Last, C + L);
+            Stream_Element_Offset'Min (Last, C + L - 1);
    begin
       while N < Last loop
          Text_IO.Put ("> ");
@@ -243,7 +245,7 @@ procedure Srv is
          Text_IO.New_Line;
 
          C := N + 1;
-         N := Stream_Element_Offset'Min (Last, C + L);
+         N := Stream_Element_Offset'Min (Last, C + L - 1);
       end loop;
    end Write_Callback;
 
@@ -258,6 +260,8 @@ begin
    Text_IO.Put_Line ("Press Q to exit...");
 
    AWS.Net.Log.Start (Write_Callback'Unrestricted_Access);
+
+   Local_Check;
 
    --  AWS.Headers.Debug (True);
 

@@ -15,9 +15,12 @@ Then send a request to server (non secure):
   => with curl we can start testing more easily the implementation
      of HTTP/2 with upgrade protocol.
 
+ [2]
+   $ curl --http2-prior-knowledge -o out http://localhost:1234/toto
+
 Or secure:
 
-[2]
+[3]
   $ curl --http2 --cacert=cert.pem https://localhost:1234/toto
 
   => will be dealt with later
@@ -36,6 +39,9 @@ In this mode the headers sent are (displayed by srv CB routine):
 
 
 -----------------------
-[2] secure requests
+[2] HTTP/2 - no upgrade as prior knowledge that the server supports it
+
+-----------------------
+[3] secure requests
 
 ???

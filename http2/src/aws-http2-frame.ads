@@ -27,6 +27,11 @@
 --  covered by the  GNU Public License.                                     --
 ------------------------------------------------------------------------------
 
+with System;
+
+with AWS.Net;
+with AWS.Utils;
+
 package AWS.HTTP2.Frame is
 
    type Object is private;
@@ -49,6 +54,8 @@ package AWS.HTTP2.Frame is
      with Size => 8;
 
    procedure Create (Kind : Kind_Type; Flags : Flags_Type);
+
+   procedure Read (Sock : Net.Socket_Type'Class);
 
 private
 
@@ -81,7 +88,7 @@ private
    subtype Length_Type is Natural range 0 .. 2 ** 24 - 1;
    subtype Bit1 is Natural range 0 .. 1;
 
-   type Object is record
+   type Header is record
       Length : Length_Type;
       Kind   : Kind_Type;
       Flags  : Flags_Type;
@@ -89,12 +96,19 @@ private
       Id     : Natural;
    end record;
 
-   for Object use record
+   for Header'Bit_Order use System.High_Order_First;
+   for Header'Scalar_Storage_Order use System.High_Order_First;
+   for Header use record
       Length at 0 range 0 .. 23;
       Kind   at 0 range 24 .. 31;
       Flags  at 4 range 0 .. 7;
-      R      at 5 range 0 .. 0;
-      Id     at 5 range 1 .. 31;
+      R      at 5 range 31 .. 31;
+      Id     at 5 range 0 .. 30;
+   end record;
+
+   type Object is record
+      H       : Header;
+      Payload : Utils.Stream_Element_Array_Access;
    end record;
 
 end AWS.HTTP2.Frame;
