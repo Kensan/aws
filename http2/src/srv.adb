@@ -35,6 +35,7 @@ with Ada.Text_IO;
 with AWS.Config.Set;
 with AWS.Headers;
 with AWS.Net.Buffered;
+with AWS.Net.Log;
 with AWS.Net.Std;
 with AWS.Response;
 with AWS.Server;
@@ -205,6 +206,16 @@ procedure Srv is
       Get_Response (New_Sock);
    end Local_Check;
 
+   procedure Write_Callback
+     (Direction : Net.Log.Data_Direction;
+      Socket    : Net.Socket_Type'Class;
+      Data      : Stream_Element_Array;
+      Last      : Stream_Element_Offset)
+   is
+   begin
+      Text_IO.Put_Line ("WC");
+   end Write_Callback;
+
    Buffer : Stream_Element_Array (1 .. 200);
    Last   : Stream_Element_Offset := 0;
 
@@ -214,6 +225,8 @@ procedure Srv is
 begin
    Text_IO.Put_Line ("AWS " & AWS.Version);
    Text_IO.Put_Line ("Press Q to exit...");
+
+   AWS.Net.Log.Start (Write_Callback'Unrestricted_Access);
 
    --  AWS.Headers.Debug (True);
 
