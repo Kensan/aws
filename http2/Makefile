@@ -1,6 +1,8 @@
+OPTS=-XSOCKET=gnutls -XPRJ_TARGET=UNIX -XTARGET=x86_64-linux-gnu
+
 all:
-	gprbuild -g -p -XPRJ_TARGET=UNIX -XTARGET=x86_64-linux-gnu ../aws.gpr
-	gprbuild -g -p -XPRJ_TARGET=UNIX -XTARGET=x86_64-linux-gnu prj.gpr
+	gprbuild -g -p $(OPTS) ../aws.gpr
+	gprbuild -g -p $(OPTS) prj.gpr
 
 clean:
 	rm -fr obj

@@ -212,8 +212,39 @@ procedure Srv is
       Data      : Stream_Element_Array;
       Last      : Stream_Element_Offset)
    is
+      L : constant := 10;
+      C : Stream_Element_Offset := Data'First;
+      N : Stream_Element_Offset :=
+            Stream_Element_Offset'Min (Last, C + L);
    begin
-      Text_IO.Put_Line ("WC");
+      while N < Last loop
+         Text_IO.Put ("> ");
+         for K in C .. N loop
+            Integer_Text_IO.Put
+              (Integer (Data (K)), Width => 6, Base => 16);
+            Text_IO.Put (' ');
+         end loop;
+
+         Text_IO.New_Line;
+
+         Text_IO.Put ("  ");
+         for K in C .. N loop
+            declare
+               I : Character := Character'Val (Integer (Data (K)));
+            begin
+               if Integer (Data (K)) not in 32 .. 127 then
+                  I := '?';
+               end if;
+               Text_IO.Put ("    " & I);
+               Text_IO.Put ("  ");
+            end;
+         end loop;
+
+         Text_IO.New_Line;
+
+         C := N + 1;
+         N := Stream_Element_Offset'Min (Last, C + L);
+      end loop;
    end Write_Callback;
 
    Buffer : Stream_Element_Array (1 .. 200);
