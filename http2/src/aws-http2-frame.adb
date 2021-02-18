@@ -33,6 +33,7 @@ with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Streams;
 
 with AWS.Net.Buffered;
+with AWS.HPACK;
 
 package body AWS.HTTP2.Frame is
 
@@ -138,7 +139,7 @@ package body AWS.HTTP2.Frame is
 
       procedure Dump_Headers is
          -- RFC-7540 / 6.2
-         Pad_Length : Byte_1;
+         Pad_Length : Byte_1 := 0;
          PL_S       : Stream_Element_Array (1 .. 1)
                         with Address => Pad_length'Address;
 
@@ -157,8 +158,29 @@ package body AWS.HTTP2.Frame is
             Net.Buffered.Read (Sock, S);
          end if;
 
-         Net.Buffered.Read (Sock, S);
-         Dump ("wu", S);
+         if (O.H.Flags and End_Stream_Flag) = End_Stream_Flag then
+            Put_Line (" END_STREAM");
+         end if;
+
+         if (O.H.Flags and End_Headers_Flag) = End_Headers_Flag then
+            Put_Line (" END_HEADERS");
+         end if;
+
+         --  Read header block
+
+         HPACK.Get_Headers (Sock);
+
+         --  Read padding if any
+
+         if Pad_Length > 0 then
+            declare
+               Trash : Stream_Element_Array
+                         (1 .. Stream_Element_Offset (Pad_Length));
+            begin
+               Put_Line ("PAD LENGTH: " & Pad_Length'Img);
+               Net.Buffered.Read (Sock, Trash);
+            end;
+         end if;
       end Dump_Headers;
 
    begin

@@ -31,6 +31,6 @@ with AWS.Net;
 
 package AWS.HPACK is
 
-   procedure Get_Header (Sock : Net.Socket_Type'Class);
+   procedure Get_Headers (Sock : Net.Socket_Type'Class);
 
 end AWS.HPACK;

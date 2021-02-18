@@ -107,7 +107,7 @@ package body AWS.HPACK is
    function Get_Indexed_Name (Idx : Stream_Element) return String;
    procedure Get_Indexed_Name_Value (Idx : Stream_Element);
 
-   procedure Get_Header (Sock : Net.Socket_Type'Class) is
+   procedure Get_Headers (Sock : Net.Socket_Type'Class) is
 
       Byte : Bit8;
       Bit  : RFC_Byte (G1) with Address => Byte'Address;
@@ -265,7 +265,7 @@ package body AWS.HPACK is
 
          Table.Dump (T);
       end loop;
-   end Get_Header;
+   end Get_Headers;
 
    function Get_Indexed_Name (Idx : Stream_Element) return String is
    begin
