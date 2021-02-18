@@ -41,6 +41,7 @@ with AWS.Response;
 with AWS.Server;
 with AWS.Status;
 with AWS.Translator;
+with AWS.Utils;
 
 with AWS.HPACK.Huffman;
 with AWS.HTTP2.Frame;
@@ -222,8 +223,8 @@ procedure Srv is
       while N < Last loop
          Text_IO.Put ("> ");
          for K in C .. N loop
-            Integer_Text_IO.Put
-              (Integer (Data (K)), Width => 6, Base => 16);
+            Put
+              (Utils.Hex (Integer (Data (K)), Width => 2)); -- , Base => 16);
             Text_IO.Put (' ');
          end loop;
 
@@ -237,8 +238,7 @@ procedure Srv is
                if Integer (Data (K)) not in 32 .. 127 then
                   I := '?';
                end if;
-               Text_IO.Put ("    " & I);
-               Text_IO.Put ("  ");
+               Text_IO.Put (" " & I & ' ');
             end;
          end loop;
 

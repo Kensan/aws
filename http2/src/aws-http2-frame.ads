@@ -50,14 +50,25 @@ package AWS.HTTP2.Frame is
 
    --  Error codes that are used in RST_Stream and GoAway frames
 
-   type Flags_Type is (C, D)
-     with Size => 8;
+   type Flags_Type is mod 2 ** 8 with Size => 8;
+
+   End_Stream_Flag  : constant Flags_Type;
+   Ack_Flag         : constant Flags_Type;
+   End_Headers_Flag : constant Flags_Type;
+   Padded_Flag      : constant Flags_Type;
+   Priority_Flag    : constant Flags_Type;
 
    procedure Create (Kind : Kind_Type; Flags : Flags_Type);
 
    procedure Read (Sock : Net.Socket_Type'Class);
 
 private
+
+   End_Stream_Flag  : constant Flags_Type := 16#01#;
+   Ack_Flag         : constant Flags_Type := 16#01#;
+   End_Headers_Flag : constant Flags_Type := 16#04#;
+   Padded_Flag      : constant Flags_Type := 16#08#;
+   Priority_Flag    : constant Flags_Type := 16#20#;
 
    for Kind_Type use (Data          => 16#0#,
                       Headers       => 16#1#,
@@ -85,15 +96,21 @@ private
                         Inadequate_Security => 16#C#,
                         HTTP_1_1_Required   => 16#D#);
 
-   subtype Length_Type is Natural range 0 .. 2 ** 24 - 1;
-   subtype Bit1 is Natural range 0 .. 1;
+   type Bit_1 is mod 2 ** 1 with Size => 1;
+
+   type Byte_1 is mod 2 **  8 with Size => 8;
+   type Byte_2 is mod 2 ** 16 with Size => 16;
+   type Byte_3 is mod 2 ** 24 with Size => 24;
+   type Byte_4 is mod 2 ** 32 with Size => 32;
+
+   subtype Length_Type is Byte_3 range 0 .. 2 ** 24 - 1;
 
    type Header is record
       Length : Length_Type;
       Kind   : Kind_Type;
       Flags  : Flags_Type;
-      R      : Bit1;
-      Id     : Natural;
+      R      : Bit_1;
+      Id     : Natural range 0 .. 2 ** 31 - 1;
    end record;
 
    for Header'Bit_Order use System.High_Order_First;
