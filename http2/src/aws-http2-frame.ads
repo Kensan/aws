@@ -125,21 +125,21 @@ private
    subtype Length_Type is Byte_3 range 0 .. 2 ** 24 - 1;
 
    type Header is record
-      Length : Length_Type;
-      Kind   : Kind_Type;
-      Flags  : Flags_Type;
-      R      : Bit_1;
-      Id     : Natural range 0 .. 2 ** 31 - 1;
+      Length    : Length_Type;
+      Kind      : Kind_Type;
+      Flags     : Flags_Type;
+      R         : Bit_1;
+      Stream_Id : Natural range 0 .. 2 ** 31 - 1;
    end record;
 
    for Header'Bit_Order use System.High_Order_First;
    for Header'Scalar_Storage_Order use System.High_Order_First;
    for Header use record
-      Length at 0 range 0 .. 23;
-      Kind   at 0 range 24 .. 31;
-      Flags  at 4 range 0 .. 7;
-      R      at 5 range 31 .. 31;
-      Id     at 5 range 0 .. 30;
+      Length    at 0 range 0 .. 23;
+      Kind      at 0 range 24 .. 31;
+      Flags     at 4 range 0 .. 7;
+      R         at 5 range 31 .. 31;
+      Stream_Id at 5 range 0 .. 30;
    end record;
 
    type Object is record

@@ -102,7 +102,7 @@ package body AWS.HTTP2.Frame is
 
    procedure Dump (O : Object) is
    begin
-      Put_Line ("Id : " & Integer (O.H.Id)'Img);
+      Put_Line ("Id : " & Integer (O.H.Stream_Id)'Img);
       Put ("   L    : " & Integer (O.H.Length)'Img);
       Integer_Text_IO.Put (Integer (O.H.Length), Base => 16);
       New_Line;
@@ -244,6 +244,8 @@ package body AWS.HTTP2.Frame is
    function Ack_Settings return Object is
    begin
       return O : Object do
+         --  A settings frame must always have a stream id of 0
+         O.H.Stream_Id := 0;
          O.H.Length := 0;
          O.H.Kind := Settings;
          O.H.R := 0;
@@ -260,6 +262,8 @@ package body AWS.HTTP2.Frame is
       if O.Payload /= null then
          Net.Buffered.Write (Sock, O.Payload.all);
       end if;
+
+      Net.Buffered.Flush (Sock);
    end Send;
 
 end AWS.HTTP2.Frame;

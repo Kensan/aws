@@ -33,6 +33,7 @@ with Ada.Text_IO;
 with System;
 
 with AWS.HPACK.Table;
+with AWS.HPACK.Huffman;
 with AWS.Net.Buffered;
 with AWS.Translator;
 
@@ -138,14 +139,15 @@ package body AWS.HPACK is
          declare
             Length : constant Stream_Element := Byte and 2#0111_1111#;
             Str    : Stream_Element_Array
-                        (1 .. Stream_Element_Offset (Length));
+                       (1 .. Stream_Element_Offset (Length));
          begin
             Net.Buffered.Read (Sock, Str);
             Len := Len + Stream_Element_Offset (Length);
 
             if Bit.B0 = 1 then
                --  Huffman encode
-               return "[HE]";
+
+               return Huffman.Decode (Str);
 
             else
                --  Plain literal
