@@ -168,7 +168,7 @@ package body AWS.HTTP2.Frame is
 
          --  Read header block
 
-         HPACK.Get_Headers (Sock);
+         HPACK.Get_Headers (Sock, Stream_Element_Offset (O.H.Length));
 
          --  Read padding if any
 
@@ -232,9 +232,13 @@ package body AWS.HTTP2.Frame is
          Dump_Payload (Sock, O);
       end loop;
 
+      Put_Line ("@@@ Try answering");
+
       --  Try sending an answer
 
       Send (Sock, Ack_Settings);
+
+      delay 5.0;
    end Read;
 
    function Ack_Settings return Object is

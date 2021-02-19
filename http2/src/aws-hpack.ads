@@ -27,10 +27,16 @@
 --  covered by the  GNU Public License.                                     --
 ------------------------------------------------------------------------------
 
+with Ada.Streams;
+
 with AWS.Net;
 
 package AWS.HPACK is
 
-   procedure Get_Headers (Sock : Net.Socket_Type'Class);
+   use Ada.Streams;
+
+   procedure Get_Headers
+     (Sock   : Net.Socket_Type'Class;
+      Length : Stream_ELement_Offset);
 
 end AWS.HPACK;

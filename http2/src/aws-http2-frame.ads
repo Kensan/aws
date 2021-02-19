@@ -64,7 +64,7 @@ package AWS.HTTP2.Frame is
       MAX_CONCURRENT_STREAMS,
       INITIAL_WINDOW_SIZE,
       MAX_FRAME_SIZE,
-      MAX_HEADER_LIST_SIZE) with Size => 8;
+      MAX_HEADER_LIST_SIZE);
 
    procedure Create (Kind : Kind_Type; Flags : Flags_Type);
 

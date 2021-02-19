@@ -107,12 +107,17 @@ package body AWS.HPACK is
    function Get_Indexed_Name (Idx : Stream_Element) return String;
    procedure Get_Indexed_Name_Value (Idx : Stream_Element);
 
-   procedure Get_Headers (Sock : Net.Socket_Type'Class) is
+   procedure Get_Headers
+     (Sock   : Net.Socket_Type'Class;
+      Length : Stream_ELement_Offset)
+   is
 
       Byte : Bit8;
       Bit  : RFC_Byte (G1) with Address => Byte'Address;
       BG2  : RFC_Byte (G2) with Address => Byte'Address;
       BG4  : RFC_Byte (G4) with Address => Byte'Address;
+
+      Len  : Stream_Element_Offset := 0;
 
       function Get_String_Literal return String;
 
@@ -128,6 +133,7 @@ package body AWS.HPACK is
          --   +-------------------------------+
 
          Byte := Net.Buffered.Get_Byte (Sock);
+         Len := Len + 1;
 
          declare
             Length : constant Stream_Element := Byte and 2#0111_1111#;
@@ -135,6 +141,7 @@ package body AWS.HPACK is
                         (1 .. Stream_Element_Offset (Length));
          begin
             Net.Buffered.Read (Sock, Str);
+            Len := Len + Stream_Element_Offset (Length);
 
             if Bit.B0 = 1 then
                --  Huffman encode
@@ -153,6 +160,7 @@ package body AWS.HPACK is
    begin
       loop
          Byte := Net.Buffered.Get_Byte (Sock);
+         Len := Len + 1;
 
 --         Put_Line ("H " & Byte'Img & "    RFC " & Bit.B0'Img & Bit.B1'Img);
 --         Put_Line ("      RFC B2: " & BG2.B20'Img);
@@ -264,6 +272,8 @@ package body AWS.HPACK is
          end if;
 
          Table.Dump (T);
+
+         exit when Len = Length;
       end loop;
    end Get_Headers;
 
