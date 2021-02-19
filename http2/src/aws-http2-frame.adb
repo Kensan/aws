@@ -50,7 +50,7 @@ package body AWS.HTTP2.Frame is
 
 
    type Settings_Payload is record
-      Id    : Byte_2;
+      Id    : Settings_Kind;
       Value : Byte_4;
    end record;
 
@@ -231,6 +231,31 @@ package body AWS.HTTP2.Frame is
          Dump (O);
          Dump_Payload (Sock, O);
       end loop;
+
+      --  Try sending an answer
+
+      Send (Sock, Ack_Settings);
    end Read;
+
+   function Ack_Settings return Object is
+   begin
+      return O : Object do
+         O.H.Length := 0;
+         O.H.Kind := Settings;
+         O.H.R := 0;
+         O.H.Flags := Ack_Flag;
+      end return;
+   end Ack_Settings;
+
+   procedure Send (Sock : Net.Socket_Type'Class; O : Object) is
+      use type Utils.Stream_Element_Array_Access;
+      S : Stream_Element_Array (1 .. 9) with Address => O'Address;
+   begin
+      Net.Buffered.Write (Sock, S);
+
+      if O.Payload /= null then
+         Net.Buffered.Write (Sock, O.Payload.all);
+      end if;
+   end Send;
 
 end AWS.HTTP2.Frame;

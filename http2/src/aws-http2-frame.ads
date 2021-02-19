@@ -58,9 +58,21 @@ package AWS.HTTP2.Frame is
    Padded_Flag      : constant Flags_Type;
    Priority_Flag    : constant Flags_Type;
 
+   type Settings_Kind is
+     (HEADER_TABLE_SIZE,
+      ENABLE_PUSH,
+      MAX_CONCURRENT_STREAMS,
+      INITIAL_WINDOW_SIZE,
+      MAX_FRAME_SIZE,
+      MAX_HEADER_LIST_SIZE) with Size => 8;
+
    procedure Create (Kind : Kind_Type; Flags : Flags_Type);
 
+   function Ack_Settings return Object;
+
    procedure Read (Sock : Net.Socket_Type'Class);
+
+   procedure Send (Sock : Net.Socket_Type'Class; O : Object);
 
 private
 
@@ -95,6 +107,13 @@ private
                         Enhance_Your_CALM   => 16#B#,
                         Inadequate_Security => 16#C#,
                         HTTP_1_1_Required   => 16#D#);
+
+   for Settings_Kind use (HEADER_TABLE_SIZE      => 16#1#,
+                          ENABLE_PUSH            => 16#2#,
+                          MAX_CONCURRENT_STREAMS => 16#3#,
+                          INITIAL_WINDOW_SIZE    => 16#4#,
+                          MAX_FRAME_SIZE         => 16#5#,
+                          MAX_HEADER_LIST_SIZE   => 16#6#);
 
    type Bit_1 is mod 2 ** 1 with Size => 1;
 
