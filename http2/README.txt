@@ -16,7 +16,8 @@ Then send a request to server (non secure):
      of HTTP/2 with upgrade protocol.
 
  [2]
-   $ curl --http2-prior-knowledge -o out http://localhost:1234/toto
+   $ curl --verbose --trace - --http2-prior-knowledge \
+     -o out http://localhost:1234/toto
 
 Or secure:
 

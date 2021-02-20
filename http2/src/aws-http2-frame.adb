@@ -39,6 +39,7 @@ package body AWS.HTTP2.Frame is
 
    use Ada;
    use Ada.Streams;
+   use System;
 
    pragma Warnings (Off, "overlay changes scalar storage order");
 
@@ -48,26 +49,63 @@ package body AWS.HTTP2.Frame is
                            16#2e#, 16#30#, 16#0d#, 16#0a#, 16#0d#, 16#0a#,
                            16#53#, 16#4d#, 16#0d#, 16#0a#, 16#0d#, 16#0a#);
 
+   --  RFC-7540 6.2
+   --
+   --  +---------------+
+   --  |Pad Length? (8)|
+   --  +-+-------------+-----------------------------------------------+
+   --  |E|                 Stream Dependency? (31)                     |
+   --  +-+-------------+-----------------------------------------------+
+   --  |  Weight? (8)  |
+   --  +-+-------------+-----------------------------------------------+
+   --  |                   Header Block Fragment (*)                 ...
+   --  +---------------------------------------------------------------+
+   --  |                           Padding (*)                       ...
+   --  +---------------------------------------------------------------+
+
+   type Headers_Padded_Payload is record
+      Pad_Length : Byte_1;
+   end record;
+
+   for Headers_Padded_Payload'Bit_Order use High_Order_First;
+   for Headers_Padded_Payload'Scalar_Storage_Order use High_Order_First;
+   for Headers_Padded_Payload use record
+      Pad_Length at 0 range 0 .. 7;
+   end record;
+
+   --  RFC-7540 6.5.1
+   --
+   --  +-------------------------------+
+   --  |       Identifier (16)         |
+   --  +-------------------------------+-------------------------------+
+   --  |                        Value (32)                             |
+   --  +---------------------------------------------------------------+
 
    type Settings_Payload is record
       Id    : Settings_Kind;
       Value : Byte_4;
    end record;
 
-   for Settings_Payload'Bit_Order use System.High_Order_First;
-   for Settings_Payload'Scalar_Storage_Order use System.High_Order_First;
+   for Settings_Payload'Bit_Order use High_Order_First;
+   for Settings_Payload'Scalar_Storage_Order use High_Order_First;
    for Settings_Payload use record
       Id    at 0 range 0 .. 15;
       Value at 2 range 0 .. 31;
    end record;
+
+   --  RFC-7540 6.9
+   --
+   --  +-+-------------------------------------------------------------+
+   --  |R|              Window Size Increment (31)                     |
+   --  +-+-------------------------------------------------------------+
 
    type Window_Update_Payload is record
       R              : Bit_1;
       Size_Increment : Byte_4 range 0 .. 2 ** 31 - 1;
    end record;
 
-   for Window_Update_Payload'Bit_Order use System.High_Order_First;
-   for Window_Update_Payload'Scalar_Storage_Order use System.High_Order_First;
+   for Window_Update_Payload'Bit_Order use High_Order_First;
+   for Window_Update_Payload'Scalar_Storage_Order use High_Order_First;
    for Window_Update_Payload use record
       R              at 0 range 31 .. 31;
       Size_Increment at 0 range  0 .. 30;
@@ -75,18 +113,46 @@ package body AWS.HTTP2.Frame is
 
    --  The header payload present only if Priority flag is set
 
-   type Header_Priority_Payload is record
+   --  RFC-7540 6.3
+   --
+   --  +-+-------------------------------------------------------------+
+   --  |E|                  Stream Dependency (31)                     |
+   --  +-+-------------+-----------------------------------------------+
+   --  |   Weight (8)  |
+   --  +-+-------------+
+
+   type Headers_Priority_Payload is record
       E                 : Bit_1;
       Stream_Dependency : Byte_4 range 0 .. 2 ** 31 - 1;
       Weight            : Byte_1;
    end record;
 
-   for Header_Priority_Payload'Bit_Order use System.High_Order_First;
-   for Header_Priority_Payload'Scalar_Storage_Order use System.High_Order_First;
-   for Header_Priority_Payload use record
+   for Headers_Priority_Payload'Bit_Order use High_Order_First;
+   for Headers_Priority_Payload'Scalar_Storage_Order use High_Order_First;
+   for Headers_Priority_Payload use record
       E                 at 0 range 31 .. 31;
       Stream_Dependency at 0 range  0 .. 30;
       Weight            at 4 range  0 ..  8;
+   end record;
+
+   --  RFC-7540 6.1
+   --
+   --  +---------------+
+   --  |Pad Length? (8)|
+   --  +---------------+-----------------------------------------------+
+   --  |                            Data (*)                         ...
+   --  +---------------------------------------------------------------+
+   --  |                           Padding (*)                       ...
+   --  +---------------------------------------------------------------+
+
+   type Data_Payload is record
+      Pad_Length : Byte_1;
+   end record;
+
+   for Data_Payload'Bit_Order use High_Order_First;
+   for Data_Payload'Scalar_Storage_Order use High_Order_First;
+   for Data_Payload use record
+      Pad_Length at 0 range 0 .. 7;
    end record;
 
    procedure Create (Kind : Kind_Type; Flags : Flags_Type) is null;
@@ -139,23 +205,26 @@ package body AWS.HTTP2.Frame is
 
       procedure Dump_Headers is
          -- RFC-7540 / 6.2
-         Pad_Length : Byte_1 := 0;
-         PL_S       : Stream_Element_Array (1 .. 1)
-                        with Address => Pad_length'Address;
+         Pad_PL : Headers_Padded_Payload := (Pad_Length => 0);
+         Pad_S  : Stream_Element_Array (1 .. 1)
+                    with Address => Pad_PL'Address;
 
-         P          : Header_Priority_Payload;
-         S          : Stream_Element_Array (1 .. 6) with Address => P'Address;
+         Prio_PL : Headers_Priority_Payload;
+         Prio_S  : Stream_Element_Array (1 .. 5)
+                     with Address => Prio_PL'Address;
       begin
          --  Read pad-length if corresponding flag set
 
          if (O.H.Flags and Padded_Flag) = Padded_Flag then
-            Net.Buffered.Read (Sock, PL_S);
+            Net.Buffered.Read (Sock, Pad_S);
+            Put_Line ("H: Pad length " & Pad_PL.Pad_Length'Img);
          end if;
 
          --  Read header priority patload if corresponding flag set
 
          if (O.H.Flags and Priority_Flag) = Priority_Flag then
-            Net.Buffered.Read (Sock, S);
+            Net.Buffered.Read (Sock, Prio_S);
+            Put_Line ("H: stream deps & weight ");
          end if;
 
          if (O.H.Flags and End_Stream_Flag) = End_Stream_Flag then
@@ -172,12 +241,11 @@ package body AWS.HTTP2.Frame is
 
          --  Read padding if any
 
-         if Pad_Length > 0 then
+         if Pad_PL.Pad_Length > 0 then
             declare
                Trash : Stream_Element_Array
-                         (1 .. Stream_Element_Offset (Pad_Length));
+                         (1 .. Stream_Element_Offset (Pad_PL.Pad_Length));
             begin
-               Put_Line ("PAD LENGTH: " & Pad_Length'Img);
                Net.Buffered.Read (Sock, Trash);
             end;
          end if;
@@ -202,6 +270,37 @@ package body AWS.HTTP2.Frame is
          end;
       end if;
    end;
+
+   function Settings return Object is
+   begin
+      return O : Object do
+         O.H.Stream_Id := 0;
+         O.H.Length := 6; -- for demo
+         O.H.Kind := Settings;
+         O.H.R := 0;
+         O.H.Flags := 0;
+      end return;
+   end Settings;
+
+   function Data return Object is
+      PL : constant String := "<p>Hello !</p>";
+   begin
+      return O : Object do
+         --  A settings frame must always have a stream id of 0
+         O.H.Stream_Id := 1;
+         O.H.Length := PL'Length;
+         O.H.Kind := Data;
+         O.H.R := 0;
+         O.H.Flags := 0;
+
+         O.Payload := new
+           Stream_Element_Array (1 .. Stream_Element_Offset (O.H.Length));
+
+         for K in PL'Range loop
+            O.Payload (Stream_Element_Offset (K)) := Character'Pos (PL (K));
+         end loop;
+      end return;
+   end Data;
 
    ----------
    -- Read --
@@ -232,11 +331,26 @@ package body AWS.HTTP2.Frame is
          Dump_Payload (Sock, O);
       end loop;
 
+      --  Answer settings payload
+
+      Send (Sock, Settings);
+      declare
+        SP : Settings_Payload;
+        X  : Stream_Element_Array (1 .. 6) with Address => SP'Address;
+      begin
+        SP.Id := MAX_CONCURRENT_STREAMS;
+        SP.Value := 326;
+        Net.Buffered.Write (Sock, X);
+      end;
+      Net.Buffered.Flush (Sock);
+
       Put_Line ("@@@ Try answering");
 
       --  Try sending an answer
 
-      Send (Sock, Ack_Settings);
+--      Send (Sock, Ack_Settings);
+
+      Send (Sock, Data);
 
       delay 5.0;
    end Read;
@@ -257,9 +371,11 @@ package body AWS.HTTP2.Frame is
       use type Utils.Stream_Element_Array_Access;
       S : Stream_Element_Array (1 .. 9) with Address => O'Address;
    begin
+      Dump ("send", S);
       Net.Buffered.Write (Sock, S);
 
       if O.Payload /= null then
+         Put_Line ("==============> SEND some payload");
          Net.Buffered.Write (Sock, O.Payload.all);
       end if;
 

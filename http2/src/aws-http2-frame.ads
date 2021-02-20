@@ -70,6 +70,8 @@ package AWS.HTTP2.Frame is
 
    function Ack_Settings return Object;
 
+   function Settings return Object;
+
    procedure Read (Sock : Net.Socket_Type'Class);
 
    procedure Send (Sock : Net.Socket_Type'Class; O : Object);
@@ -130,7 +132,21 @@ private
       Flags     : Flags_Type;
       R         : Bit_1;
       Stream_Id : Natural range 0 .. 2 ** 31 - 1;
-   end record;
+   end record
+     with Dynamic_Invariant =>
+            (if Kind = Window_Update then Length = 4)
+            and then
+            (if Kind = Headers then Stream_Id > 0);
+
+   --  +-----------------------------------------------+
+   --  |                 Length (24)                   |
+   --  +---------------+---------------+---------------+
+   --  |   Type (8)    |   Flags (8)   |
+   --  +-+-------------+---------------+-------------------------------+
+   --  |R|                 Stream Identifier (31)                      |
+   --  +=+=============================================================+
+   --  |                   Frame Payload (0...)                      ...
+   --  +---------------------------------------------------------------+
 
    for Header'Bit_Order use System.High_Order_First;
    for Header'Scalar_Storage_Order use System.High_Order_First;
@@ -138,8 +154,8 @@ private
       Length    at 0 range 0 .. 23;
       Kind      at 0 range 24 .. 31;
       Flags     at 4 range 0 .. 7;
-      R         at 5 range 31 .. 31;
-      Stream_Id at 5 range 0 .. 30;
+      R         at 5 range 0 .. 0;
+      Stream_Id at 5 range 1 .. 31;
    end record;
 
    type Object is record
