@@ -282,6 +282,38 @@ package body AWS.HTTP2.Frame is
       end return;
    end Settings;
 
+   procedure Set_Payload (O : in out Object; Payload : String) is
+   begin
+      O.H.Length := Payload'Length;
+
+      O.Payload := new
+        Stream_Element_Array (1 .. Stream_Element_Offset (O.H.Length));
+
+      for K in Payload'Range loop
+         O.Payload (Stream_Element_Offset (K)) := Character'Pos (Payload (K));
+      end loop;
+   end Set_Payload;
+
+   function Headers return Object is
+      CRLF : constant String := String'(ASCII.CR, ASCII.LF);
+      PL : constant String :=  "HTTP/2 200 " & CRLF
+                             & "expires: -1" & CRLF
+                             & "cache-control: private, max-age=0" & CRLF;
+      HPL : constant Stream_Element_Array :=
+               Headers.Encode (PL);
+   begin
+      return O : Object do
+         O.H.Stream_Id := 1;
+         O.H.Length := HPL'Length; -- for demo
+         O.H.Kind := Headers;
+         O.H.R := 0;
+         O.H.Flags := 0;
+
+         --  Set_Payload (O, PL);
+         O.Payload := new Stream_Element_Array'(HPL);
+      end return;
+   end Headers;
+
    function Data return Object is
       PL : constant String := "<p>Hello !</p>";
    begin
@@ -291,7 +323,7 @@ package body AWS.HTTP2.Frame is
          O.H.Length := PL'Length;
          O.H.Kind := Data;
          O.H.R := 0;
-         O.H.Flags := 0;
+         O.H.Flags := End_Stream_Flag;
 
          O.Payload := new
            Stream_Element_Array (1 .. Stream_Element_Offset (O.H.Length));
@@ -349,6 +381,8 @@ package body AWS.HTTP2.Frame is
       --  Try sending an answer
 
 --      Send (Sock, Ack_Settings);
+
+      Send (Sock, Headers);
 
       Send (Sock, Data);
 
