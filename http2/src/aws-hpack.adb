@@ -341,9 +341,9 @@ package body AWS.HPACK is
       Append (S (1));
       Send ("aws");
 
-      H := Stream_Element (64 + Table.Get_Name_Index (T, "content-length"));
-      Append (S (1));
-      Send ("12");
+--      H := Stream_Element (64 + Table.Get_Name_Index (T, "content-length"));
+--      Append (S (1));
+--      Send ("12");
 
 --      H := 0;
 --      Append (S (1));

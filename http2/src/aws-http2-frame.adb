@@ -155,6 +155,22 @@ package body AWS.HTTP2.Frame is
       Pad_Length at 0 range 0 .. 7;
    end record;
 
+   --  RFC-7540 6.4
+   --
+   --  +---------------------------------------------------------------+
+   --  |                        Error Code (32)                        |
+   --  +---------------------------------------------------------------+
+
+   type RST_Stream_Payload is record
+      Error_Code : Byte_4;
+   end record;
+
+   for RST_Stream_Payload'Bit_Order use High_Order_First;
+   for RST_Stream_Payload'Scalar_Storage_Order use High_Order_First;
+   for RST_Stream_Payload use record
+      Error_Code at 0 range 0 .. 31;
+   end record;
+
    procedure Create (Kind : Kind_Type; Flags : Flags_Type) is null;
 
    procedure Dump (Msg : String; S : Stream_Element_Array) is
@@ -278,7 +294,7 @@ package body AWS.HTTP2.Frame is
          O.H.Length := 6; -- for demo
          O.H.Kind := Settings;
          O.H.R := 0;
-         O.H.Flags := 0;
+         O.H.Flags := 0; -- End_Stream_Flag;
       end return;
    end Settings;
 
@@ -307,7 +323,7 @@ package body AWS.HTTP2.Frame is
          --  Set_Payload (O, PL);
          O.Payload := new Stream_Element_Array'(HPL);
 
---         O.H.Length := O.Payload.all'Length;
+         O.H.Length := O.Payload.all'Length;
          Put_Line ("H: payload " & O.H.Length'Img);
       end return;
    end Headers;
@@ -332,10 +348,9 @@ package body AWS.HTTP2.Frame is
    end E_Headers;
 
    function Data return Object is
-      PL : constant String := "<p>Hello ! this is a large message from AWS</p>";
+      PL : constant String := "<p>Hello ! from AWS</p>";
    begin
       return O : Object do
-         --  A settings frame must always have a stream id of 0
          O.H.Stream_Id := 1;
          O.H.Length := PL'Length;
          O.H.Kind := Data;
@@ -345,6 +360,22 @@ package body AWS.HTTP2.Frame is
          Set_Payload (O, PL);
       end return;
    end Data;
+
+   function RST return Object is
+      EC : RST_Stream_Payload;
+      S  : Stream_Element_Array (1 .. 4) with Address => EC'Address;
+   begin
+      return O : Object do
+         O.H.Stream_Id := 0;
+         O.H.Length := 4;
+         O.H.Kind := RST_Stream;
+         O.H.R := 0;
+         O.H.Flags := 0;
+
+         EC.Error_Code := 0;
+         O.Payload := new Stream_Element_Array'(S);
+      end return;
+   end RST;
 
    ----------
    -- Read --
@@ -373,6 +404,10 @@ package body AWS.HTTP2.Frame is
          Net.Buffered.Read (Sock, S);
          Dump (O);
          Dump_Payload (Sock, O);
+
+--         if K = 1 then
+--            Send (Sock, Ack_Settings);
+--         end if;
       end loop;
 
       --  Answer settings payload
@@ -394,12 +429,21 @@ package body AWS.HTTP2.Frame is
 
 --      Send (Sock, Ack_Settings);
 
+      for k in 4 .. 4 loop
+         Put_Line ("@@@ Frame: " & K'Img);
+         Net.Buffered.Read (Sock, S);
+         Dump (O);
+         Dump_Payload (Sock, O);
+      end loop;
+
+      Send (Sock, Ack_Settings);
 
       Send (Sock, Headers);
 --      Send (Sock, E_Headers);
 
       Send (Sock, Data);
 
+--      Send (Sock, RST);
       delay 5.0;
    end Read;
 
@@ -411,7 +455,7 @@ package body AWS.HTTP2.Frame is
          O.H.Length := 0;
          O.H.Kind := Settings;
          O.H.R := 0;
-         O.H.Flags := Ack_Flag + End_Stream_Flag;
+         O.H.Flags := Ack_Flag; -- + End_Stream_Flag;
       end return;
    end Ack_Settings;
 
