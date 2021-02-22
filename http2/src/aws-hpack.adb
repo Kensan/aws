@@ -141,6 +141,8 @@ package body AWS.HPACK is
             Str    : Stream_Element_Array
                        (1 .. Stream_Element_Offset (Length));
          begin
+            Put_Line ("Read: " & Length'Img);
+
             Net.Buffered.Read (Sock, Str);
             Len := Len + Stream_Element_Offset (Length);
 
@@ -222,11 +224,16 @@ package body AWS.HPACK is
 
                declare
                   Name  : constant String := Get_Indexed_Name (Idx);
+               begin
+                  Put_Line ("******* " & Name);
+
+               declare
                   Value : constant String := Get_String_Literal;
                begin
                   Put_Line (Name & " - " & Value);
 
                   T.Insert (Name, Value);
+               end;
                end;
 
             elsif Byte = Zero then
@@ -268,6 +275,9 @@ package body AWS.HPACK is
                begin
                   Put_Line (Name & " - " & Value);
                end;
+
+            else
+               Put_Line ("================ HPACK NOT YET SUPPORTED");
             end if;
 
             --  ??? 6.2.3 (not coverred for now)
@@ -290,6 +300,58 @@ package body AWS.HPACK is
    begin
       Put_Line (I.Name & " " & I.Value);
    end Get_Indexed_Name_Value;
+
+   function Encode return Stream_Element_Array is
+
+      Res : Stream_Element_Array (1 .. 1000);
+      I   : Stream_Element_Offset := 0;
+
+      procedure Append (E : Stream_Element) is
+      begin
+         I := I + 1;
+         Res (I) := E;
+      end Append;
+
+      procedure Send (Str : String) is
+         H : Bit8;
+         S : Stream_Element_Array (1 .. 1) with Address => H'Address;
+      begin
+         H := Str'Length;
+         Append (S (1));
+
+         for K in Str'Range loop
+            Append (Stream_Element (Character'Pos (Str (K))));
+         end loop;
+      end Send;
+
+      CRLF : constant String := String'(ASCII.CR, ASCII.LF);
+
+      H : Bit8;
+      S : Stream_Element_Array (1 .. 1) with Address => H'Address;
+
+   begin
+      H := Stream_Element (128 + Table.Get_Name_Index (T, ":status=200"));
+      Append (S (1));
+
+      H := Stream_Element (64 + Table.Get_Name_Index (T, "content-type"));
+      Append (S (1));
+      Send ("text/html"); --  & CRLF);
+
+      H := Stream_Element (64 + Table.Get_Name_Index (T, "server"));
+      Append (S (1));
+      Send ("aws");
+
+      H := Stream_Element (64 + Table.Get_Name_Index (T, "content-length"));
+      Append (S (1));
+      Send ("12");
+
+--      H := 0;
+--      Append (S (1));
+--      Send (CRLF);
+--      Send ("");
+
+      return Res (1 .. I);
+   end Encode;
 
 begin
    AWS.HPACK.Table.Init (T);

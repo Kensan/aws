@@ -26,6 +26,12 @@ Or secure:
 
   => will be dealt with later
 
+[4]
+  $ curl --trace - --http2-prior-knowledge -o out --data body \
+    http://localhost:1234/toto
+
+(a POST request)
+
 -----------------------
 [1] non secure requests
 

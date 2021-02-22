@@ -206,7 +206,7 @@ procedure Srv is
 
       Client.Stop;
 
-      Get_Response (New_Sock);
+--      Get_Response (New_Sock);
    end Local_Check;
 
    procedure Write_Callback

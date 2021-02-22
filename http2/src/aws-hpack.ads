@@ -39,4 +39,8 @@ package AWS.HPACK is
      (Sock   : Net.Socket_Type'Class;
       Length : Stream_ELement_Offset);
 
+   function Encode return Stream_Element_Array;
+   --  ??? need to pass the header list
+   --  ??? probably passing the Frame.Object to record the payload directly
+
 end AWS.HPACK;

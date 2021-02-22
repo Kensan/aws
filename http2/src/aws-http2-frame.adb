@@ -295,27 +295,44 @@ package body AWS.HTTP2.Frame is
    end Set_Payload;
 
    function Headers return Object is
-      CRLF : constant String := String'(ASCII.CR, ASCII.LF);
-      PL : constant String :=  "HTTP/2 200 " & CRLF
-                             & "expires: -1" & CRLF
-                             & "cache-control: private, max-age=0" & CRLF;
-      HPL : constant Stream_Element_Array :=
-               Headers.Encode (PL);
+      HPL : constant Stream_Element_Array := HPACK.Encode;
    begin
       return O : Object do
          O.H.Stream_Id := 1;
          O.H.Length := HPL'Length; -- for demo
          O.H.Kind := Headers;
          O.H.R := 0;
-         O.H.Flags := 0;
+         O.H.Flags := End_Headers_Flag;
 
          --  Set_Payload (O, PL);
          O.Payload := new Stream_Element_Array'(HPL);
+
+--         O.H.Length := O.Payload.all'Length;
+         Put_Line ("H: payload " & O.H.Length'Img);
       end return;
    end Headers;
 
+   function E_Headers return Object is
+   begin
+      return O : Object do
+         O.H.Stream_Id := 1;
+         O.H.Length := 2; -- for demo
+         O.H.Kind := Headers;
+         O.H.R := 0;
+         O.H.Flags := 0;
+
+         --  Set_Payload (O, PL);
+         O.Payload := new Stream_Element_Array'
+                            (Character'Pos (ASCII.CR),
+                             Character'Pos (ASCII.LF));
+
+--         O.H.Length := O.Payload.all'Length;
+         Put_Line ("H: payload " & O.H.Length'Img);
+      end return;
+   end E_Headers;
+
    function Data return Object is
-      PL : constant String := "<p>Hello !</p>";
+      PL : constant String := "<p>Hello ! this is a large message from AWS</p>";
    begin
       return O : Object do
          --  A settings frame must always have a stream id of 0
@@ -325,12 +342,7 @@ package body AWS.HTTP2.Frame is
          O.H.R := 0;
          O.H.Flags := End_Stream_Flag;
 
-         O.Payload := new
-           Stream_Element_Array (1 .. Stream_Element_Offset (O.H.Length));
-
-         for K in PL'Range loop
-            O.Payload (Stream_Element_Offset (K)) := Character'Pos (PL (K));
-         end loop;
+         Set_Payload (O, PL);
       end return;
    end Data;
 
@@ -382,7 +394,9 @@ package body AWS.HTTP2.Frame is
 
 --      Send (Sock, Ack_Settings);
 
+
       Send (Sock, Headers);
+--      Send (Sock, E_Headers);
 
       Send (Sock, Data);
 
@@ -397,7 +411,7 @@ package body AWS.HTTP2.Frame is
          O.H.Length := 0;
          O.H.Kind := Settings;
          O.H.R := 0;
-         O.H.Flags := Ack_Flag;
+         O.H.Flags := Ack_Flag + End_Stream_Flag;
       end return;
    end Ack_Settings;
 
@@ -407,9 +421,10 @@ package body AWS.HTTP2.Frame is
    begin
       Dump ("send", S);
       Net.Buffered.Write (Sock, S);
+      Net.Buffered.Flush (Sock);
 
       if O.Payload /= null then
-         Put_Line ("==============> SEND some payload");
+         Put_Line ("==============> SEND some payload " & O.Payload'Length'Img);
          Net.Buffered.Write (Sock, O.Payload.all);
       end if;
 
