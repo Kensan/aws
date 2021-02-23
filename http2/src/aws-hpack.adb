@@ -267,13 +267,17 @@ package body AWS.HPACK is
 
                Idx := Byte and 2#0000_1111#;
 
-               Put_Line ("B_No_Indexing " & Idx'Img);
+               Put_Line ("B_No_Indexing " & Byte'Img & Idx'Img);
 
                declare
                   Name  : constant String := Get_Indexed_Name (Idx);
+               begin
+                  Put_Line ("Name only: " & Name);
+               declare
                   Value : constant String := Get_String_Literal;
                begin
                   Put_Line (Name & " - " & Value);
+               end;
                end;
 
             else
@@ -343,8 +347,9 @@ package body AWS.HPACK is
 
 --      H := Stream_Element (64 + Table.Get_Name_Index (T, "content-length"));
 --      Append (S (1));
---      Send ("12");
+--      Send ("21");
 
+      Put_Line ("I=" & I'Img);
 --      H := 0;
 --      Append (S (1));
 --      Send (CRLF);

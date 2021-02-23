@@ -184,11 +184,10 @@ package body AWS.HTTP2.Frame is
 
    procedure Dump (O : Object) is
    begin
-      Put_Line ("Id : " & Integer (O.H.Stream_Id)'Img);
-      Put ("   L    : " & Integer (O.H.Length)'Img);
-      Integer_Text_IO.Put (Integer (O.H.Length), Base => 16);
-      New_Line;
-      Put_Line ("   Kind : " & O.H.Kind'Img & "   Flags : " & O.H.Flags'Img);
+      Put ("FRAME: Id:" & Integer (O.H.Stream_Id)'Img);
+      Put ("  L:" & Integer (O.H.Length)'Img);
+      Integer_Text_IO.Put (Integer (O.H.Length), Width => 6, Base => 16);
+      Put_Line ("  Kind: " & O.H.Kind'Img & "   Flags:" & O.H.Flags'Img);
    end Dump;
 
    procedure Dump_Payload (Sock : Net.Socket_Type'Class; O : Object) is
@@ -400,7 +399,6 @@ package body AWS.HTTP2.Frame is
       --  Get Frames
 
       for k in 1 .. 3 loop
-         Put_Line ("@@@ Frame: " & K'Img);
          Net.Buffered.Read (Sock, S);
          Dump (O);
          Dump_Payload (Sock, O);
@@ -430,7 +428,6 @@ package body AWS.HTTP2.Frame is
 --      Send (Sock, Ack_Settings);
 
       for k in 4 .. 4 loop
-         Put_Line ("@@@ Frame: " & K'Img);
          Net.Buffered.Read (Sock, S);
          Dump (O);
          Dump_Payload (Sock, O);
