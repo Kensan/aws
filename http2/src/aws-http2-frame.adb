@@ -71,26 +71,6 @@ package body AWS.HTTP2.Frame is
       Pad_Length at 0 range 0 .. 7;
    end record;
 
-   --  RFC-7540 6.5.1
-   --
-   --  +-------------------------------+
-   --  |       Identifier (16)         |
-   --  +-------------------------------+-------------------------------+
-   --  |                        Value (32)                             |
-   --  +---------------------------------------------------------------+
-
-   --  type Settings_Payload is record
-   --     Id    : Settings_Kind;
-   --     Value : Byte_4;
-   --  end record;
-
-   --  for Settings_Payload'Bit_Order use High_Order_First;
-   --  for Settings_Payload'Scalar_Storage_Order use High_Order_First;
-   --  for Settings_Payload use record
-   --     Id    at 0 range 0 .. 15;
-   --     Value at 2 range 0 .. 31;
-   --  end record;
-
    --  RFC-7540 6.9
    --
    --  +-+-------------------------------------------------------------+
@@ -285,43 +265,6 @@ package body AWS.HTTP2.Frame is
       end loop;
    end Set_Payload;
 
-   --  function Headers return Object is
-   --     HPL : constant Stream_Element_Array := HPACK.Encode;
-   --  begin
-   --     return O : Object do
-   --        O.Header.H.Stream_Id := 1;
-   --        O.Header.H.Length := HPL'Length; -- for demo
-   --        O.Header.H.Kind := Headers;
-   --        O.Header.H.R := 0;
-   --        O.Header.H.Flags := End_Headers_Flag;
-
-   --        --  Set_Payload (O, PL);
-   --        O.Payload := new Stream_Element_Array'(HPL);
-
-   --        O.Header.H.Length := O.Payload.all'Length;
-   --        Put_Line ("H: payload " & O.Header.H.Length'Img);
-   --     end return;
-   --  end Headers;
-
-   function E_Headers return Object is
-   begin
-      return O : Object do
-         O.Header.H.Stream_Id := 1;
-         O.Header.H.Length := 2; -- for demo
-         O.Header.H.Kind := K_Headers;
-         O.Header.H.R := 0;
-         O.Header.H.Flags := 0;
-
-         --  Set_Payload (O, PL);
-         O.Payload := new Stream_Element_Array'
-                            (Character'Pos (ASCII.CR),
-                             Character'Pos (ASCII.LF));
-
---         O.H.Length := O.Payload.all'Length;
-         Put_Line ("H: payload " & O.Header.H.Length'Img);
-      end return;
-   end E_Headers;
-
    function RST return Object is
       EC : RST_Stream_Payload;
       S  : Stream_Element_Array (1 .. 4) with Address => EC'Address;
@@ -410,17 +353,11 @@ package body AWS.HTTP2.Frame is
       use type Utils.Stream_Element_Array_Access;
    begin
       Dump ("send", O.Header.S);
+
       Net.Buffered.Write (Sock, O.Header.S);
 
-      if O.Header.H.Kind in K_Settings | K_Data | K_Headers
-         and then O.Header.H.Length > 0
-      then
+      if O.Header.H.Length > 0 then
          Send_Payload (Sock, Object'Class (O));
-      else
-      if O.Payload /= null then
-         Put_Line ("==============> SEND some payload " & O.Payload'Length'Img);
-         Net.Buffered.Write (Sock, O.Payload.all);
-      end if;
       end if;
 
       Net.Buffered.Flush (Sock);
