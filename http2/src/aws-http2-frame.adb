@@ -47,8 +47,6 @@ package body AWS.HTTP2.Frame is
    use Ada.Streams;
    use System;
 
-   pragma Warnings (Off, "overlay changes scalar storage order");
-
    procedure Dump (O : Object'Class) is
    begin
       Put ("FRAME: Id:" & Integer (O.Header.H.Stream_Id)'Img);
