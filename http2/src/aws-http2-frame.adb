@@ -39,6 +39,7 @@ with AWS.HTTP2.Frame.Data;
 with AWS.HTTP2.Frame.Headers;
 with AWS.HTTP2.Frame.Settings;
 with AWS.HTTP2.Frame.Window_Update;
+with AWS.HTTP2.Frame.RST_Stream;
 
 package body AWS.HTTP2.Frame is
 
@@ -47,22 +48,6 @@ package body AWS.HTTP2.Frame is
    use System;
 
    pragma Warnings (Off, "overlay changes scalar storage order");
-
-   --  RFC-7540 6.4
-   --
-   --  +---------------------------------------------------------------+
-   --  |                        Error Code (32)                        |
-   --  +---------------------------------------------------------------+
-
-   type RST_Stream_Payload is record
-      Error_Code : Byte_4;
-   end record;
-
-   for RST_Stream_Payload'Bit_Order use High_Order_First;
-   for RST_Stream_Payload'Scalar_Storage_Order use High_Order_First;
-   for RST_Stream_Payload use record
-      Error_Code at 0 range 0 .. 31;
-   end record;
 
    procedure Dump (O : Object'Class) is
    begin
@@ -84,6 +69,9 @@ package body AWS.HTTP2.Frame is
       elsif O.Header.H.Kind = K_Headers then
          Headers.Dump (Headers.Object (O));
 
+      elsif O.Header.H.Kind = K_RST_Stream then
+         RST_Stream.Dump (RST_Stream.Object (O));
+
       else
          Put_Line ("=> YET unsupported frame, skip payload");
          declare
@@ -99,7 +87,6 @@ package body AWS.HTTP2.Frame is
    ----------
 
    procedure Go (Sock : Net.Socket_Type'Class) is
-      O : Object;
    begin
       --  Get Frames
 
@@ -161,6 +148,8 @@ package body AWS.HTTP2.Frame is
             return Frame.Headers.Read (Sock, H);
          when K_Window_Update =>
             return Frame.Window_Update.Read (Sock, H);
+         when K_RST_Stream =>
+            return Frame.RST_Stream.Read (Sock, H);
          when Others =>
             return H;
       end case;

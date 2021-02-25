@@ -43,7 +43,7 @@ package AWS.HTTP2.Frame is
    type Object is new Finalization.Controlled with private;
 
    type Kind_Type is (K_Data, k_Headers, K_Priority,
-                      RST_Stream, K_Settings, Push_Promise,
+                      K_RST_Stream, K_Settings, Push_Promise,
                       Ping, GoAway, K_Window_Update, Continuation)
      with Size => 8;
    --  Frame kind, see section 6 RFC 7540
@@ -85,7 +85,7 @@ private
    for Kind_Type use (K_Data          => 16#0#,
                       k_Headers       => 16#1#,
                       K_Priority      => 16#2#,
-                      RST_Stream    => 16#3#,
+                      K_RST_Stream    => 16#3#,
                       K_Settings      => 16#4#,
                       Push_Promise  => 16#5#,
                       Ping          => 16#6#,
