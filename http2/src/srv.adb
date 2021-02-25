@@ -186,6 +186,12 @@ procedure Srv is
    end Client;
 
    procedure Local_Check is
+      Connection_Preface : constant Stream_Element_Array :=
+                             (16#50#, 16#52#, 16#49#, 16#20#, 16#2a#, 16#20#,
+                              16#48#, 16#54#, 16#54#, 16#50#, 16#2f#, 16#32#,
+                              16#2e#, 16#30#, 16#0d#, 16#0a#, 16#0d#, 16#0a#,
+                              16#53#, 16#4d#, 16#0d#, 16#0a#, 16#0d#, 16#0a#);
+      Preface : Stream_Element_Array (1 .. 24);
    begin
       Check_Huffman ("www.example.com");
       Check_Huffman ("some other string");
@@ -200,9 +206,27 @@ procedure Srv is
 
       Text_IO.Put_Line ("Socket accepted...");
 
+      --  First connection start with a preface
+      --  This check should not be there!!!
+      Net.Buffered.Read (New_Sock, Preface);
+
+      if Preface = Connection_Preface then
+         Put_Line ("connection preface ok2");
+      else
+         --  Should be a PROTOCOL_ERROR
+         Put_Line ("connection preface NOT ok2");
+      end if;
+
       --      AWS.HPack.Get_Header (New_Sock);
 
-      AWS.HTTP2.Frame.Read (New_Sock);
+      AWS.HTTP2.Frame.Go (New_Sock);
+
+      --  declare
+      --     F : AWS.HTTP2.Frame.Object'Class := AWS.HTTP2.Frame.Read (New_Sock);
+      --  begin
+
+      --     null;
+      --  end;
 
       Client.Stop;
 

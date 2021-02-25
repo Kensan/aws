@@ -34,6 +34,7 @@ with Ada.Streams;
 
 with AWS.Net.Buffered;
 with AWS.HPACK;
+with AWS.HTTP2.Frame.Settings;
 
 package body AWS.HTTP2.Frame is
 
@@ -81,17 +82,17 @@ package body AWS.HTTP2.Frame is
    --  |                        Value (32)                             |
    --  +---------------------------------------------------------------+
 
-   type Settings_Payload is record
-      Id    : Settings_Kind;
-      Value : Byte_4;
-   end record;
+   --  type Settings_Payload is record
+   --     Id    : Settings_Kind;
+   --     Value : Byte_4;
+   --  end record;
 
-   for Settings_Payload'Bit_Order use High_Order_First;
-   for Settings_Payload'Scalar_Storage_Order use High_Order_First;
-   for Settings_Payload use record
-      Id    at 0 range 0 .. 15;
-      Value at 2 range 0 .. 31;
-   end record;
+   --  for Settings_Payload'Bit_Order use High_Order_First;
+   --  for Settings_Payload'Scalar_Storage_Order use High_Order_First;
+   --  for Settings_Payload use record
+   --     Id    at 0 range 0 .. 15;
+   --     Value at 2 range 0 .. 31;
+   --  end record;
 
    --  RFC-7540 6.9
    --
@@ -182,31 +183,18 @@ package body AWS.HTTP2.Frame is
       Put_Line (")");
    end Dump;
 
-   procedure Dump (O : Object) is
+   procedure Dump (O : Object'Class) is
    begin
       Put ("FRAME: Id:" & Integer (O.Header.H.Stream_Id)'Img);
       Put ("  L:" & Integer (O.Header.H.Length)'Img);
-      Integer_Text_IO.Put (Integer (O.Header.H.Length), Width => 6, Base => 16);
+      Integer_Text_IO.Put (Integer (O.Header.H.Length), Width => 8, Base => 16);
       Put_Line ("  Kind: " & O.Header.H.Kind'Img & "   Flags:" & O.Header.H.Flags'Img);
    end Dump;
 
-   procedure Dump_Payload (Sock : Net.Socket_Type'Class; O : Object) is
+   procedure Dump_Payload (Sock : Net.Socket_Type'Class; O : Object'Class) is
 
-      L : constant Stream_Element_Offset := Stream_Element_Offset (O.Header.H.Length);
-
-      procedure Dump_Settings is
-         -- RFC-7540 / 6.5
-         N : constant Natural := Natural (L) / (Settings_Payload'Size / 8);
-         P : Settings_Payload;
-         S : Stream_Element_Array (1 .. Settings_Payload'Size / 8)
-               with Address => P'Address;
-      begin
-         for K in 1 .. N loop
-            Net.Buffered.Read (Sock, S);
-            Dump ("set", S);
-            Put_Line ("S: " & P.Id'Img & " = " & P.Value'Img);
-         end loop;
-      end Dump_Settings;
+      L : constant Stream_Element_Count :=
+            Stream_Element_Offset (O.Header.H.Length);
 
       procedure Dump_Window_Update is
          -- RFC-7540 / 6.9
@@ -269,8 +257,8 @@ package body AWS.HTTP2.Frame is
       use Utils;
 
    begin
-      if O.Header.H.Kind = Settings then
-         Dump_Settings;
+      if O.Header.H.Kind = K_Settings then
+         Settings.Dump (Settings.Object (O));
 
       elsif O.Header.H.Kind = Window_Update then
          Dump_Window_Update;
@@ -288,16 +276,16 @@ package body AWS.HTTP2.Frame is
       end if;
    end Dump_Payload;
 
-   function Settings return Object is
-   begin
-      return O : Object do
-         O.Header.H.Stream_Id := 0;
-         O.Header.H.Length := 6; -- for demo
-         O.Header.H.Kind := Settings;
-         O.Header.H.R := 0;
-         O.Header.H.Flags := 0; -- End_Stream_Flag;
-      end return;
-   end Settings;
+   --  function Settings return Object is
+   --  begin
+   --     return O : Object do
+   --        O.Header.H.Stream_Id := 0;
+   --        O.Header.H.Length := 6; -- for demo
+   --        O.Header.H.Kind := Settings;
+   --        O.Header.H.R := 0;
+   --        O.Header.H.Flags := 0; -- End_Stream_Flag;
+   --     end return;
+   --  end Settings;
 
    procedure Set_Payload (O : in out Object; Payload : String) is
    begin
@@ -382,29 +370,32 @@ package body AWS.HTTP2.Frame is
    -- Read --
    ----------
 
-   procedure Read (Sock : Net.Socket_Type'Class) is
-      Preface : Stream_Element_Array (1 .. 24);
+   procedure Go (Sock : Net.Socket_Type'Class) is
+--      Preface : Stream_Element_Array (1 .. 24);
       O       : Object;
 --      S       : Stream_Element_Array (1 .. 9) with Address => O'Address;
    begin
       --  First connection start with a preface
       --  This check should not be there!!!
-      Net.Buffered.Read (Sock, Preface);
+--      Net.Buffered.Read (Sock, Preface);
 
-      if Preface = Connection_Preface then
-         Put_Line ("connection preface ok");
-      else
-         --  Should be a PROTOCOL_ERROR
-         Put_Line ("connection preface NOT ok");
-      end if;
+      --  if Preface = Connection_Preface then
+      --     Put_Line ("connection preface ok");
+      --  else
+      --     --  Should be a PROTOCOL_ERROR
+      --     Put_Line ("connection preface NOT ok");
+      --  end if;
 
       --  Get Frames
 
       for k in 1 .. 3 loop
-         Net.Buffered.Read (Sock, O.Header.S);
-         Dump (O);
-         Dump_Payload (Sock, O);
-
+         Put_Line ("FFFFFFFFF " & K'Img);
+         declare
+            F : Object'Class := Read (Sock);
+         begin
+            Dump (F);
+            Dump_Payload (Sock, F);
+         end;
 --         if K = 1 then
 --            Send (Sock, Ack_Settings);
 --         end if;
@@ -412,14 +403,16 @@ package body AWS.HTTP2.Frame is
 
       --  Answer settings payload
 
-      Send (Sock, Settings);
+--      Send (Sock, Settings);
       declare
-        SP : Settings_Payload;
-        X  : Stream_Element_Array (1 .. 6) with Address => SP'Address;
+        SP : Settings.Payload;
+--        X  : Stream_Element_Array (1 .. 6) with Address => SP'Address;
       begin
-        SP.Id := MAX_CONCURRENT_STREAMS;
+        SP.Id := Settings.MAX_CONCURRENT_STREAMS;
         SP.Value := 326;
-        Net.Buffered.Write (Sock, X);
+
+        Send (Sock, Settings.Create (Settings.Set'(1 => SP)));
+--        Net.Buffered.Write (Sock, X);
       end;
       Net.Buffered.Flush (Sock);
 
@@ -430,12 +423,15 @@ package body AWS.HTTP2.Frame is
 --      Send (Sock, Ack_Settings);
 
       for k in 4 .. 4 loop
-         Net.Buffered.Read (Sock, O.Header.S);
-         Dump (O);
-         Dump_Payload (Sock, O);
+         declare
+            F : Object'Class := Read (Sock);
+         begin
+            Dump (F);
+            Dump_Payload (Sock, F);
+         end;
       end loop;
 
-      Send (Sock, Ack_Settings);
+      Send (Sock, Settings.Ack);
 
       Send (Sock, Headers);
 --      Send (Sock, E_Headers);
@@ -444,31 +440,48 @@ package body AWS.HTTP2.Frame is
 
 --      Send (Sock, RST);
       delay 5.0;
+   end Go;
+
+   function Read (Sock : Net.Socket_Type'Class) return Object'Class is
+      H : Object;
+   begin
+      Net.Buffered.Read (Sock, H.Header.S);
+
+      case H.Header.H.Kind is
+         when K_Settings =>
+            return Frame.Settings.Read (Sock, H);
+         when Others =>
+            return H;
+      end case;
    end Read;
 
-   function Ack_Settings return Object is
-   begin
-      return O : Object do
-         --  A settings frame must always have a stream id of 0
-         O.Header.H.Stream_Id := 0;
-         O.Header.H.Length := 0;
-         O.Header.H.Kind := Settings;
-         O.Header.H.R := 0;
-         O.Header.H.Flags := Ack_Flag; -- + End_Stream_Flag;
-      end return;
-   end Ack_Settings;
+   --  function Ack_Settings return Object is
+   --  begin
+   --     return O : Object do
+   --        --  A settings frame must always have a stream id of 0
+   --        O.Header.H.Stream_Id := 0;
+   --        O.Header.H.Length := 0;
+   --        O.Header.H.Kind := Settings;
+   --        O.Header.H.R := 0;
+   --        O.Header.H.Flags := Ack_Flag; -- + End_Stream_Flag;
+   --     end return;
+   --  end Ack_Settings;
 
-   procedure Send (Sock : Net.Socket_Type'Class; O : Object) is
+   procedure Send (Sock : Net.Socket_Type'Class; O : Object'Class) is
       use type Utils.Stream_Element_Array_Access;
---      S : Stream_Element_Array (1 .. 9) with Address => O'Address;
    begin
       Dump ("send", O.Header.S);
       Net.Buffered.Write (Sock, O.Header.S);
-      Net.Buffered.Flush (Sock);
 
+      if O.Header.H.Kind = K_Settings
+         and then O.Header.H.Length > 0
+      then
+         Send_Payload (Sock, Object'Class (O));
+      else
       if O.Payload /= null then
          Put_Line ("==============> SEND some payload " & O.Payload'Length'Img);
          Net.Buffered.Write (Sock, O.Payload.all);
+      end if;
       end if;
 
       Net.Buffered.Flush (Sock);

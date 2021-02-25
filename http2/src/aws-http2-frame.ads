@@ -38,11 +38,12 @@ with AWS.Utils;
 package AWS.HTTP2.Frame is
 
    use Ada;
+   use Ada.Streams;
 
    type Object is new Finalization.Controlled with private;
 
    type Kind_Type is (Data, Headers, Priority,
-                      RST_Stream, Settings, Push_Promise,
+                      RST_Stream, K_Settings, Push_Promise,
                       Ping, GoAway, Window_Update, Continuation)
      with Size => 8;
    --  Frame kind, see section 6 RFC 7540
@@ -63,28 +64,19 @@ package AWS.HTTP2.Frame is
    Padded_Flag      : constant Flags_Type;
    Priority_Flag    : constant Flags_Type;
 
-   type Settings_Kind is
-     (HEADER_TABLE_SIZE,
-      ENABLE_PUSH,
-      MAX_CONCURRENT_STREAMS,
-      INITIAL_WINDOW_SIZE,
-      MAX_FRAME_SIZE,
-      MAX_HEADER_LIST_SIZE);
-
    procedure Create (Kind : Kind_Type; Flags : Flags_Type);
 
-   function Ack_Settings return Object;
+   function Read (Sock : Net.Socket_Type'Class) return Object'Class;
 
-   function Settings return Object;
+   procedure Send (Sock : Net.Socket_Type'Class; O : Object'Class);
 
-   procedure Read (Sock : Net.Socket_Type'Class);
+   procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object) is null;
 
-   procedure Send (Sock : Net.Socket_Type'Class; O : Object);
+   procedure Go (Sock : Net.Socket_Type'Class);
 
 private
 
    use Ada;
-   use Ada.Streams;
 
    End_Stream_Flag  : constant Flags_Type := 16#01#;
    Ack_Flag         : constant Flags_Type := 16#01#;
@@ -96,7 +88,7 @@ private
                       Headers       => 16#1#,
                       Priority      => 16#2#,
                       RST_Stream    => 16#3#,
-                      Settings      => 16#4#,
+                      K_Settings      => 16#4#,
                       Push_Promise  => 16#5#,
                       Ping          => 16#6#,
                       GoAway        => 16#7#,
@@ -117,20 +109,6 @@ private
                         Enhance_Your_CALM   => 16#B#,
                         Inadequate_Security => 16#C#,
                         HTTP_1_1_Required   => 16#D#);
-
-   for Settings_Kind use (HEADER_TABLE_SIZE      => 16#1#,
-                          ENABLE_PUSH            => 16#2#,
-                          MAX_CONCURRENT_STREAMS => 16#3#,
-                          INITIAL_WINDOW_SIZE    => 16#4#,
-                          MAX_FRAME_SIZE         => 16#5#,
-                          MAX_HEADER_LIST_SIZE   => 16#6#);
-
-   type Bit_1 is mod 2 ** 1 with Size => 1;
-
-   type Byte_1 is mod 2 **  8 with Size => 8;
-   type Byte_2 is mod 2 ** 16 with Size => 16;
-   type Byte_3 is mod 2 ** 24 with Size => 24;
-   type Byte_4 is mod 2 ** 32 with Size => 32;
 
    subtype Length_Type is Byte_3 range 0 .. 2 ** 24 - 1;
 

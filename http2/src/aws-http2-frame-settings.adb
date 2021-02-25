@@ -27,13 +27,70 @@
 --  covered by the  GNU Public License.                                     --
 ------------------------------------------------------------------------------
 
-package AWS.HTTP2 with Pure is
+with GNAT.IO; use GNAT.IO;
 
-   type Bit_1 is mod 2 ** 1 with Size => 1;
+with AWS.Net.Buffered;
 
-   type Byte_1 is mod 2 **  8 with Size => 8;
-   type Byte_2 is mod 2 ** 16 with Size => 16;
-   type Byte_3 is mod 2 ** 24 with Size => 24;
-   type Byte_4 is mod 2 ** 32 with Size => 32;
+package body AWS.HTTP2.Frame.Settings is
 
-end AWS.HTTP2;
+   function Ack return Object is
+   begin
+      return O : Object := Create (Empty_Set) do
+         O.Header.H.Flags := Ack_Flag;
+         O.Size := 0;
+      end return;
+   end Ack;
+
+   function Create (Settings : Set) return Object is
+      Len : constant Stream_Element_Count :=
+              Stream_Element_Count (Settings'Length * Payload'Size / 8);
+   begin
+      return O : Object do
+         O.Header.H.Stream_Id := 0;
+         O.Header.H.Length    := Length_Type (Len);
+         O.Header.H.Kind      := K_Settings;
+         O.Header.H.R         := 0;
+         O.Header.H.Flags     := 0;
+
+         O.Size := Stream_Element_Count (Len / (Payload'Size / 8));
+
+         if Settings'Length > 0 then
+            O.Data.S := new Stream_Element_Array
+                          (1 .. Stream_Element_Offset (Len));
+            O.Data.P (1 .. Settings'Length) := Settings;
+         end if;
+      end return;
+   end Create;
+
+   procedure Dump (O : Object) is
+   begin
+      for K in 1 .. O.Size loop
+         Put_Line ("S: " & O.Data.P (K).Id'Img
+                   & " = " & O.Data.P (K).Value'Img);
+      end loop;
+   end Dump;
+
+   function Read
+     (Sock   : Net.Socket_Type'Class;
+      Header : Frame.Object) return Object
+   is
+      Len : constant Stream_Element_Count :=
+              Stream_Element_Count (Header.Header.H.Length);
+   begin
+      return O : Object do
+         Frame.Object (O) := Header;
+         O.Size := Stream_Element_Count (Len / (Payload'Size / 8));
+
+         if Len > 0 then
+            O.Data.S := new Stream_Element_Array (1 .. Len);
+            Net.Buffered.Read (Sock, O.Data.S.all);
+         end if;
+      end return;
+   end Read;
+
+   procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object) is
+   begin
+      Net.Buffered.Write (Sock, O.Data.S.all);
+   end Send_Payload;
+
+end AWS.HTTP2.Frame.Settings;
