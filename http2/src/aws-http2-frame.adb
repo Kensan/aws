@@ -89,7 +89,6 @@ package body AWS.HTTP2.Frame is
       --  Get Frames
 
       for k in 1 .. 3 loop
-         Put_Line ("FFFFFFFFF " & K'Img);
          declare
             F : Object'Class := Read (Sock);
          begin
@@ -109,8 +108,6 @@ package body AWS.HTTP2.Frame is
         Send (Sock, Settings.Create (Settings.Set'(1 => SP)));
       end;
       Net.Buffered.Flush (Sock);
-
-      Put_Line ("@@@ Try answering");
 
       --  Try sending an answer
 
