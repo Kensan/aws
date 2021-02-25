@@ -31,15 +31,9 @@ with Ada.Text_IO;
 
 package body AWS.HTTP2.Frame.RST_Stream is
 
-   function Read
-     (Sock   : Net.Socket_Type'Class;
-      Header : Frame.Object) return Object is
-   begin
-      return O : Object do
-         Frame.Object (O) := Header;
-         Net.Buffered.Read (Sock, O.Data.S);
-      end return;
-   end Read;
+   ------------
+   -- Create --
+   ------------
 
    function Create (Error_Code : Error_Codes) return Object is
       Len : constant Stream_Element_Count :=
@@ -56,14 +50,37 @@ package body AWS.HTTP2.Frame.RST_Stream is
       end return;
    end Create;
 
-   procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object) is
-   begin
-      Net.Buffered.Write (Sock, O.Data.S);
-   end Send_Payload;
+   ----------
+   -- Dump --
+   ----------
 
    procedure Dump (O : Object) is
    begin
       Ada.Text_IO.Put_Line ("Error_Code : " & O.Data.P.Error_Code'Img);
    end Dump;
+
+   ----------
+   -- Read --
+   ----------
+
+   function Read
+     (Sock   : Net.Socket_Type'Class;
+      Header : Frame.Object) return Object is
+   begin
+      return O : Object do
+         Frame.Object (O) := Header;
+         Net.Buffered.Read (Sock, O.Data.S);
+      end return;
+   end Read;
+
+   ------------------
+   -- Send_Payload --
+   ------------------
+
+   overriding procedure Send_Payload
+     (Sock : Net.Socket_Type'Class; O : Object) is
+   begin
+      Net.Buffered.Write (Sock, O.Data.S);
+   end Send_Payload;
 
 end AWS.HTTP2.Frame.RST_Stream;

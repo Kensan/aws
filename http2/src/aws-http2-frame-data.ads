@@ -41,7 +41,7 @@ package AWS.HTTP2.Frame.Data is
 
    function Create (Content : String) return Object;
 
-   procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object);
+   overriding procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object);
 
    procedure Dump (O : Object);
 

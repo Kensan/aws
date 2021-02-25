@@ -44,7 +44,7 @@ package AWS.HTTP2.Frame.Headers is
 
    function Create (List : AWS.Headers.List) return Object;
 
-   procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object);
+   overriding procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object);
 
    procedure Dump (O : Object) is null;
 

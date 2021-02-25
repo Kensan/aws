@@ -27,42 +27,33 @@
 --  covered by the  GNU Public License.                                     --
 ------------------------------------------------------------------------------
 
-with GNAT.IO; use GNAT.IO;
+with Ada.Text_IO;
 
 with AWS.Net.Buffered;
 
-package body AWS.HTTP2.Frame.Settings is
+package body AWS.HTTP2.Frame.Priority is
 
-   function Ack return Object is
-   begin
-      return O : Object := Create (Empty_Set) do
-         O.Header.H.Flags := Ack_Flag;
-         O.Size := 0;
-      end return;
-   end Ack;
+   use Ada;
 
    ------------
    -- Create --
    ------------
 
-   function Create (Settings : Set) return Object is
+   function Create (Stream_Dependency : Stream_Dependency_Type;
+                    Weight            : Byte_1) return Object
+   is
       Len : constant Stream_Element_Count :=
-              Stream_Element_Count (Settings'Length * Payload'Size / 8);
+              Stream_Element_Count (Payload'Size / 8);
    begin
       return O : Object do
          O.Header.H.Stream_Id := 0;
          O.Header.H.Length    := Length_Type (Len);
-         O.Header.H.Kind      := K_Settings;
+         O.Header.H.Kind      := K_Priority;
          O.Header.H.R         := 0;
          O.Header.H.Flags     := 0;
 
-         O.Size := Stream_Element_Count (Len / (Payload'Size / 8));
-
-         if Settings'Length > 0 then
-            O.Data.S := new Stream_Element_Array
-                          (1 .. Stream_Element_Offset (Len));
-            O.Data.P (1 .. Settings'Length) := Settings;
-         end if;
+         O.Data.P.Stream_Dependency := Stream_Dependency;
+         O.Data.P.Weight            := Weight;
       end return;
    end Create;
 
@@ -72,10 +63,8 @@ package body AWS.HTTP2.Frame.Settings is
 
    procedure Dump (O : Object) is
    begin
-      for K in 1 .. O.Size loop
-         Put_Line ("S: " & O.Data.P (K).Id'Img
-                   & " = " & O.Data.P (K).Value'Img);
-      end loop;
+      Text_IO.Put_Line ("S: " & O.Data.P.Stream_Dependency'Img
+                        & " W: " & O.Data.P.Weight'Img);
    end Dump;
 
    ----------
@@ -91,12 +80,7 @@ package body AWS.HTTP2.Frame.Settings is
    begin
       return O : Object do
          Frame.Object (O) := Header;
-         O.Size := Stream_Element_Count (Len / (Payload'Size / 8));
-
-         if Len > 0 then
-            O.Data.S := new Stream_Element_Array (1 .. Len);
-            Net.Buffered.Read (Sock, O.Data.S.all);
-         end if;
+         Net.Buffered.Read (Sock, O.Data.S);
       end return;
    end Read;
 
@@ -107,7 +91,7 @@ package body AWS.HTTP2.Frame.Settings is
    overriding procedure Send_Payload
      (Sock : Net.Socket_Type'Class; O : Object) is
    begin
-      Net.Buffered.Write (Sock, O.Data.S.all);
+      Net.Buffered.Write (Sock, O.Data.S);
    end Send_Payload;
 
-end AWS.HTTP2.Frame.Settings;
+end AWS.HTTP2.Frame.Priority;

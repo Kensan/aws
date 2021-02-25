@@ -35,11 +35,24 @@ package AWS.HTTP2.Frame.Priority is
 
    type Object is new Frame.Object with private;
 
+   type Stream_Dependency_Type is new Byte_4 range 0 .. 2 ** 31 - 1;
+
    type Payload is record
       E                 : Bit_1;
-      Stream_Dependency : Byte_4 range 0 .. 2 ** 31 - 1;
+      Stream_Dependency : Stream_Dependency_Type;
       Weight            : Byte_1;
    end record;
+
+   function Create (Stream_Dependency : Stream_Dependency_Type;
+                    Weight            : Byte_1) return Object;
+
+   function Read
+     (Sock   : Net.Socket_Type'Class;
+      Header : Frame.Object) return Object;
+
+   overriding procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object);
+
+   procedure Dump (O : Object);
 
 private
 

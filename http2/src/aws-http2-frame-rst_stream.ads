@@ -47,7 +47,7 @@ package AWS.HTTP2.Frame.RST_Stream is
 
    function Create (Error_Code : Error_Codes) return Object;
 
-   procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object);
+   overriding procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object);
 
    procedure Dump (O : Object);
 

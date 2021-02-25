@@ -50,7 +50,7 @@ package AWS.HTTP2.Frame.Window_Update is
 
    function Create (Size_Increment : Size_Increment_Type) return Object;
 
-   procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object);
+   overriding procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object);
 
    procedure Dump (O : Object);
 

@@ -51,6 +51,10 @@ package body AWS.HPACK.Table is
    function NV_Size (NV : Name_Value) return Positive
      is (NV.Name'Length + NV.Value'Length + 32);
 
+   ----------
+   -- Dump --
+   ----------
+
    procedure Dump (Self : Object) is
      D : Dynamic_Table renames Self.Dynamic;
    begin

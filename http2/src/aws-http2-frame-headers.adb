@@ -64,7 +64,8 @@ package body AWS.HTTP2.Frame.Headers is
       end return;
    end Create;
 
-   procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object) is
+   overriding procedure Send_Payload
+     (Sock : Net.Socket_Type'Class; O : Object) is
    begin
       Net.Buffered.Write (Sock, O.Data.S.all);
    end Send_Payload;

@@ -31,22 +31,9 @@ with AWS.Translator;
 
 package body AWS.HTTP2.Frame.Data is
 
-   function Read
-     (Sock   : Net.Socket_Type'Class;
-      Header : Frame.Object) return Object
-   is
-      Len : constant Stream_Element_Count :=
-              Stream_Element_Count (Header.Header.H.Length);
-   begin
-      return O : Object do
-         Frame.Object (O) := Header;
-
-         if Len > 0 then
-            O.Data.S := new Stream_Element_Array (1 .. Len);
-            Net.Buffered.Read (Sock, O.Data.S.all);
-         end if;
-      end return;
-   end Read;
+   ------------
+   -- Create --
+   ------------
 
    function Create (Content : String) return Object is
       Len : constant Stream_Element_Count :=
@@ -65,14 +52,44 @@ package body AWS.HTTP2.Frame.Data is
       end return;
    end Create;
 
-   procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object) is
-   begin
-      Net.Buffered.Write (Sock, O.Data.S.all);
-   end Send_Payload;
+   ----------
+   -- Dump --
+   ----------
 
    procedure Dump (O : Object) is
    begin
       null;
    end Dump;
+
+   ----------
+   -- Read --
+   ----------
+
+   function Read
+     (Sock   : Net.Socket_Type'Class;
+      Header : Frame.Object) return Object
+   is
+      Len : constant Stream_Element_Count :=
+              Stream_Element_Count (Header.Header.H.Length);
+   begin
+      return O : Object do
+         Frame.Object (O) := Header;
+
+         if Len > 0 then
+            O.Data.S := new Stream_Element_Array (1 .. Len);
+            Net.Buffered.Read (Sock, O.Data.S.all);
+         end if;
+      end return;
+   end Read;
+
+   ------------------
+   -- Send_Payload --
+   ------------------
+
+   overriding procedure Send_Payload
+     (Sock : Net.Socket_Type'Class; O : Object) is
+   begin
+      Net.Buffered.Write (Sock, O.Data.S.all);
+   end Send_Payload;
 
 end AWS.HTTP2.Frame.Data;
