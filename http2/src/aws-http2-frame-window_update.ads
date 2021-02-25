@@ -27,46 +27,57 @@
 --  covered by the  GNU Public License.                                     --
 ------------------------------------------------------------------------------
 
-with AWS.Net.Buffered;
-with AWS.HPACK;
+with System;
 
-package body AWS.HTTP2.Frame.Headers is
+with AWS.Net.Buffered;
+
+package AWS.HTTP2.Frame.Window_Update is
+
+   use Ada;
+
+   type Object is new Frame.Object with private;
+
+   subtype Size_Increment_Type is Byte_4 range 0 .. 2 ** 31 - 1;
+
+   type Payload is record
+      R              : Bit_1;
+      Size_Increment : Size_Increment_Type;
+   end record;
 
    function Read
      (Sock   : Net.Socket_Type'Class;
-      Header : Frame.Object) return Object
-   is
-      Len : constant Stream_Element_Count :=
-              Stream_Element_Count (Header.Header.H.Length);
-   begin
-      return O : Object do
-         Frame.Object (O) := Header;
+      Header : Frame.Object) return Object;
 
-         if Len > 0 then
-            O.Data.S := new Stream_Element_Array (1 .. Len);
-            Net.Buffered.Read (Sock, O.Data.S.all);
-         end if;
-      end return;
-   end Read;
+   function Create (Size_Increment : Size_Increment_Type) return Object;
 
-   function Create (List : AWS.Headers.List) return Object is
-   begin
-      return O : Object do
-         if List.Length > 0 then
-            O.Data.S := new Stream_Element_Array'(HPACK.Encode);
-         end if;
+   procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object);
 
-         O.Header.H.Stream_Id := 1;
-         O.Header.H.Length    := Length_Type (O.Data.S'Length);
-         O.Header.H.Kind      := K_Headers;
-         O.Header.H.R         := 0;
-         O.Header.H.Flags     := End_Headers_Flag;
-      end return;
-   end Create;
+   procedure Dump (O : Object);
 
-   procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object) is
-   begin
-      Net.Buffered.Write (Sock, O.Data.S.all);
-   end Send_Payload;
+private
 
-end AWS.HTTP2.Frame.Headers;
+   --  RFC-7540 6.9
+   --
+   --  +-+-------------------------------------------------------------+
+   --  |R|              Window Size Increment (31)                     |
+   --  +-+-------------------------------------------------------------+
+
+   for Payload'Bit_Order use System.High_Order_First;
+   for Payload'Scalar_Storage_Order use System.High_Order_First;
+   for Payload use record
+      R              at 0 range 31 .. 31;
+      Size_Increment at 0 range  0 .. 30;
+   end record;
+
+   type Payload_View (Flat : Boolean := False) is record
+      case Flat is
+         when False => P : Payload;
+         when True =>  S : Stream_Element_Array (1 .. Payload'Size / 8);
+      end case;
+   end record with Unchecked_Union;
+
+   type Object is new Frame.Object with record
+      Data : Payload_View;
+   end record;
+
+end AWS.HTTP2.Frame.Window_Update;

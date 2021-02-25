@@ -29,11 +29,16 @@
 
 with Ada.Streams;
 
+with AWS.Headers;
 with AWS.Net;
 
 package AWS.HPACK is
 
    use Ada.Streams;
+
+   generic
+      with function Get_Byte return Stream_Element_Array;
+   function Get_Headers_G return AWS.Headers.List;
 
    procedure Get_Headers
      (Sock   : Net.Socket_Type'Class;

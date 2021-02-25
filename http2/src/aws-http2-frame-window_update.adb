@@ -27,46 +27,43 @@
 --  covered by the  GNU Public License.                                     --
 ------------------------------------------------------------------------------
 
-with AWS.Net.Buffered;
-with AWS.HPACK;
+with Ada.Text_IO;
 
-package body AWS.HTTP2.Frame.Headers is
+package body AWS.HTTP2.Frame.Window_Update is
 
    function Read
      (Sock   : Net.Socket_Type'Class;
-      Header : Frame.Object) return Object
-   is
-      Len : constant Stream_Element_Count :=
-              Stream_Element_Count (Header.Header.H.Length);
+      Header : Frame.Object) return Object is
    begin
       return O : Object do
          Frame.Object (O) := Header;
-
-         if Len > 0 then
-            O.Data.S := new Stream_Element_Array (1 .. Len);
-            Net.Buffered.Read (Sock, O.Data.S.all);
-         end if;
+         Net.Buffered.Read (Sock, O.Data.S);
       end return;
    end Read;
 
-   function Create (List : AWS.Headers.List) return Object is
+   function Create (Size_Increment : Size_Increment_Type) return Object is
+      Len : constant Stream_Element_Count :=
+              Stream_Element_Count (Payload'Size / 8);
    begin
       return O : Object do
-         if List.Length > 0 then
-            O.Data.S := new Stream_Element_Array'(HPACK.Encode);
-         end if;
-
-         O.Header.H.Stream_Id := 1;
-         O.Header.H.Length    := Length_Type (O.Data.S'Length);
-         O.Header.H.Kind      := K_Headers;
+         O.Header.H.Stream_Id := 0;
+         O.Header.H.Length    := Length_Type (Len);
+         O.Header.H.Kind      := K_Window_Update;
          O.Header.H.R         := 0;
-         O.Header.H.Flags     := End_Headers_Flag;
+         O.Header.H.Flags     := 0;
+
+         O.Data.P.Size_Increment := Size_Increment;
       end return;
    end Create;
 
    procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object) is
    begin
-      Net.Buffered.Write (Sock, O.Data.S.all);
+      Net.Buffered.Write (Sock, O.Data.S);
    end Send_Payload;
 
-end AWS.HTTP2.Frame.Headers;
+   procedure Dump (O : Object) is
+   begin
+      Ada.Text_IO.Put_Line ("Window_Update : " & O.Data.P.Size_Increment'Img);
+   end Dump;
+
+end AWS.HTTP2.Frame.Window_Update;

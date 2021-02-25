@@ -38,6 +38,7 @@ with AWS.HPACK;
 with AWS.HTTP2.Frame.Data;
 with AWS.HTTP2.Frame.Headers;
 with AWS.HTTP2.Frame.Settings;
+with AWS.HTTP2.Frame.Window_Update;
 
 package body AWS.HTTP2.Frame is
 
@@ -237,11 +238,11 @@ package body AWS.HTTP2.Frame is
       if O.Header.H.Kind = K_Settings then
          Settings.Dump (Settings.Object (O));
 
-      elsif O.Header.H.Kind = Window_Update then
-         Dump_Window_Update;
+      elsif O.Header.H.Kind = K_Window_Update then
+         Window_Update.Dump (Window_Update.Object (O));
 
       elsif O.Header.H.Kind = K_Headers then
-         Dump_Headers;
+         Headers.Dump (Headers.Object (O));
 
       else
          Put_Line ("=> YET unsupported frame, skip payload");
@@ -344,6 +345,10 @@ package body AWS.HTTP2.Frame is
             return Frame.Data.Read (Sock, H);
          when K_Settings =>
             return Frame.Settings.Read (Sock, H);
+         when K_Headers =>
+            return Frame.Headers.Read (Sock, H);
+         when K_Window_Update =>
+            return Frame.Window_Update.Read (Sock, H);
          when Others =>
             return H;
       end case;

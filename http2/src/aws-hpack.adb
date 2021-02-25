@@ -108,6 +108,12 @@ package body AWS.HPACK is
    function Get_Indexed_Name (Idx : Stream_Element) return String;
    procedure Get_Indexed_Name_Value (Idx : Stream_Element);
 
+   function Get_Headers_G return AWS.Headers.List is
+      L : AWS.Headers.List;
+   begin
+      return L;
+   end Get_Headers_G;
+
    procedure Get_Headers
      (Sock   : Net.Socket_Type'Class;
       Length : Stream_ELement_Offset)

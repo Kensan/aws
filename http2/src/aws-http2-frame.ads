@@ -44,7 +44,7 @@ package AWS.HTTP2.Frame is
 
    type Kind_Type is (K_Data, k_Headers, K_Priority,
                       RST_Stream, K_Settings, Push_Promise,
-                      Ping, GoAway, Window_Update, Continuation)
+                      Ping, GoAway, K_Window_Update, Continuation)
      with Size => 8;
    --  Frame kind, see section 6 RFC 7540
 
@@ -92,7 +92,7 @@ private
                       Push_Promise  => 16#5#,
                       Ping          => 16#6#,
                       GoAway        => 16#7#,
-                      Window_Update => 16#8#,
+                      K_Window_Update => 16#8#,
                       Continuation  => 16#9#);
 
    for Error_Codes use (No_Error            => 16#0#,
@@ -120,7 +120,7 @@ private
       Stream_Id : Natural range 0 .. 2 ** 31 - 1;
    end record
      with Dynamic_Predicate =>
-            (if Kind = Window_Update then Length = 4)
+            (if Kind = K_Window_Update then Length = 4)
               and then
             (if Kind = K_Headers then Stream_Id > 0)
               and then
