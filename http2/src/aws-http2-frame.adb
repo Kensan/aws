@@ -150,17 +150,6 @@ package body AWS.HTTP2.Frame is
       Error_Code at 0 range 0 .. 31;
    end record;
 
-   procedure Create (Kind : Kind_Type; Flags : Flags_Type) is null;
-
-   procedure Dump (Msg : String; S : Stream_Element_Array) is
-   begin
-      Put ("(" & Msg & ":  ");
-      for V of S loop
-         Put (Utils.Hex (Integer (V), Width => 2) & ' ');
-      end loop;
-      Put_Line (")");
-   end Dump;
-
    procedure Dump (O : Object'Class) is
    begin
       Put ("FRAME: Id:" & Integer (O.Header.H.Stream_Id)'Img);
@@ -170,70 +159,7 @@ package body AWS.HTTP2.Frame is
    end Dump;
 
    procedure Dump_Payload (Sock : Net.Socket_Type'Class; O : Object'Class) is
-
-      L : constant Stream_Element_Count :=
-            Stream_Element_Offset (O.Header.H.Length);
-
-      procedure Dump_Window_Update is
-         -- RFC-7540 / 6.9
-         P : Window_Update_Payload;
-         S : Stream_Element_Array (1 .. 4) with Address => P'Address;
-      begin
-         Net.Buffered.Read (Sock, S);
-         Dump ("wu", S);
-         Put_Line ("S: " & P.Size_Increment'Img);
-      end Dump_Window_Update;
-
-      procedure Dump_Headers is
-         -- RFC-7540 / 6.2
-         Pad_PL : Headers_Padded_Payload := (Pad_Length => 0);
-         Pad_S  : Stream_Element_Array (1 .. 1)
-                    with Address => Pad_PL'Address;
-
-         Prio_PL : Headers_Priority_Payload;
-         Prio_S  : Stream_Element_Array (1 .. 5)
-                     with Address => Prio_PL'Address;
-      begin
-         --  Read pad-length if corresponding flag set
-
-         if (O.Header.H.Flags and Padded_Flag) = Padded_Flag then
-            Net.Buffered.Read (Sock, Pad_S);
-            Put_Line ("H: Pad length " & Pad_PL.Pad_Length'Img);
-         end if;
-
-         --  Read header priority patload if corresponding flag set
-
-         if (O.Header.H.Flags and Priority_Flag) = Priority_Flag then
-            Net.Buffered.Read (Sock, Prio_S);
-            Put_Line ("H: stream deps & weight ");
-         end if;
-
-         if (O.Header.H.Flags and End_Stream_Flag) = End_Stream_Flag then
-            Put_Line (" END_STREAM");
-         end if;
-
-         if (O.Header.H.Flags and End_Headers_Flag) = End_Headers_Flag then
-            Put_Line (" END_HEADERS");
-         end if;
-
-         --  Read header block
-
-         HPACK.Get_Headers (Sock, Stream_Element_Offset (O.Header.H.Length));
-
-         --  Read padding if any
-
-         if Pad_PL.Pad_Length > 0 then
-            declare
-               Trash : Stream_Element_Array
-                         (1 .. Stream_Element_Offset (Pad_PL.Pad_Length));
-            begin
-               Net.Buffered.Read (Sock, Trash);
-            end;
-         end if;
-      end Dump_Headers;
-
       use Utils;
-
    begin
       if O.Header.H.Kind = K_Settings then
          Settings.Dump (Settings.Object (O));
@@ -253,34 +179,6 @@ package body AWS.HTTP2.Frame is
          end;
       end if;
    end Dump_Payload;
-
-   procedure Set_Payload (O : in out Object; Payload : String) is
-   begin
-      O.Header.H.Length := Payload'Length;
-
-      O.Payload := new
-        Stream_Element_Array (1 .. Stream_Element_Offset (O.Header.H.Length));
-
-      for K in Payload'Range loop
-         O.Payload (Stream_Element_Offset (K)) := Character'Pos (Payload (K));
-      end loop;
-   end Set_Payload;
-
-   function RST return Object is
-      EC : RST_Stream_Payload;
-      S  : Stream_Element_Array (1 .. 4) with Address => EC'Address;
-   begin
-      return O : Object do
-         O.Header.H.Stream_Id := 0;
-         O.Header.H.Length := 4;
-         O.Header.H.Kind := RST_Stream;
-         O.Header.H.R := 0;
-         O.Header.H.Flags := 0;
-
-         EC.Error_Code := 0;
-         O.Payload := new Stream_Element_Array'(S);
-      end return;
-   end RST;
 
    ----------
    -- Read --
@@ -357,8 +255,6 @@ package body AWS.HTTP2.Frame is
    procedure Send (Sock : Net.Socket_Type'Class; O : Object'Class) is
       use type Utils.Stream_Element_Array_Access;
    begin
-      Dump ("send", O.Header.S);
-
       Net.Buffered.Write (Sock, O.Header.S);
 
       if O.Header.H.Length > 0 then

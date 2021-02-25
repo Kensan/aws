@@ -64,8 +64,6 @@ package AWS.HTTP2.Frame is
    Padded_Flag      : constant Flags_Type;
    Priority_Flag    : constant Flags_Type;
 
-   procedure Create (Kind : Kind_Type; Flags : Flags_Type);
-
    function Read (Sock : Net.Socket_Type'Class) return Object'Class;
 
    procedure Send (Sock : Net.Socket_Type'Class; O : Object'Class);
