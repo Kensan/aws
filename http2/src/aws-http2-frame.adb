@@ -184,15 +184,15 @@ package body AWS.HTTP2.Frame is
 
    procedure Dump (O : Object) is
    begin
-      Put ("FRAME: Id:" & Integer (O.H.Stream_Id)'Img);
-      Put ("  L:" & Integer (O.H.Length)'Img);
-      Integer_Text_IO.Put (Integer (O.H.Length), Width => 6, Base => 16);
-      Put_Line ("  Kind: " & O.H.Kind'Img & "   Flags:" & O.H.Flags'Img);
+      Put ("FRAME: Id:" & Integer (O.Header.H.Stream_Id)'Img);
+      Put ("  L:" & Integer (O.Header.H.Length)'Img);
+      Integer_Text_IO.Put (Integer (O.Header.H.Length), Width => 6, Base => 16);
+      Put_Line ("  Kind: " & O.Header.H.Kind'Img & "   Flags:" & O.Header.H.Flags'Img);
    end Dump;
 
    procedure Dump_Payload (Sock : Net.Socket_Type'Class; O : Object) is
 
-      L : constant Stream_Element_Offset := Stream_Element_Offset (O.H.Length);
+      L : constant Stream_Element_Offset := Stream_Element_Offset (O.Header.H.Length);
 
       procedure Dump_Settings is
          -- RFC-7540 / 6.5
@@ -230,29 +230,29 @@ package body AWS.HTTP2.Frame is
       begin
          --  Read pad-length if corresponding flag set
 
-         if (O.H.Flags and Padded_Flag) = Padded_Flag then
+         if (O.Header.H.Flags and Padded_Flag) = Padded_Flag then
             Net.Buffered.Read (Sock, Pad_S);
             Put_Line ("H: Pad length " & Pad_PL.Pad_Length'Img);
          end if;
 
          --  Read header priority patload if corresponding flag set
 
-         if (O.H.Flags and Priority_Flag) = Priority_Flag then
+         if (O.Header.H.Flags and Priority_Flag) = Priority_Flag then
             Net.Buffered.Read (Sock, Prio_S);
             Put_Line ("H: stream deps & weight ");
          end if;
 
-         if (O.H.Flags and End_Stream_Flag) = End_Stream_Flag then
+         if (O.Header.H.Flags and End_Stream_Flag) = End_Stream_Flag then
             Put_Line (" END_STREAM");
          end if;
 
-         if (O.H.Flags and End_Headers_Flag) = End_Headers_Flag then
+         if (O.Header.H.Flags and End_Headers_Flag) = End_Headers_Flag then
             Put_Line (" END_HEADERS");
          end if;
 
          --  Read header block
 
-         HPACK.Get_Headers (Sock, Stream_Element_Offset (O.H.Length));
+         HPACK.Get_Headers (Sock, Stream_Element_Offset (O.Header.H.Length));
 
          --  Read padding if any
 
@@ -266,43 +266,45 @@ package body AWS.HTTP2.Frame is
          end if;
       end Dump_Headers;
 
+      use Utils;
+
    begin
-      if O.H.Kind = Settings then
+      if O.Header.H.Kind = Settings then
          Dump_Settings;
 
-      elsif O.H.Kind = Window_Update then
+      elsif O.Header.H.Kind = Window_Update then
          Dump_Window_Update;
 
-      elsif O.H.Kind = Headers then
+      elsif O.Header.H.Kind = Headers then
          Dump_Headers;
 
       else
          Put_Line ("=> YET unsupported frame, skip payload");
          declare
-            S : Stream_Element_Array (1 .. Stream_Element_Offset (O.H.Length));
+            S : Stream_Element_Array (1 .. Stream_Element_Offset (O.Header.H.Length));
          begin
             Net.Buffered.Read (Sock, S);
          end;
       end if;
-   end;
+   end Dump_Payload;
 
    function Settings return Object is
    begin
       return O : Object do
-         O.H.Stream_Id := 0;
-         O.H.Length := 6; -- for demo
-         O.H.Kind := Settings;
-         O.H.R := 0;
-         O.H.Flags := 0; -- End_Stream_Flag;
+         O.Header.H.Stream_Id := 0;
+         O.Header.H.Length := 6; -- for demo
+         O.Header.H.Kind := Settings;
+         O.Header.H.R := 0;
+         O.Header.H.Flags := 0; -- End_Stream_Flag;
       end return;
    end Settings;
 
    procedure Set_Payload (O : in out Object; Payload : String) is
    begin
-      O.H.Length := Payload'Length;
+      O.Header.H.Length := Payload'Length;
 
       O.Payload := new
-        Stream_Element_Array (1 .. Stream_Element_Offset (O.H.Length));
+        Stream_Element_Array (1 .. Stream_Element_Offset (O.Header.H.Length));
 
       for K in Payload'Range loop
          O.Payload (Stream_Element_Offset (K)) := Character'Pos (Payload (K));
@@ -313,28 +315,28 @@ package body AWS.HTTP2.Frame is
       HPL : constant Stream_Element_Array := HPACK.Encode;
    begin
       return O : Object do
-         O.H.Stream_Id := 1;
-         O.H.Length := HPL'Length; -- for demo
-         O.H.Kind := Headers;
-         O.H.R := 0;
-         O.H.Flags := End_Headers_Flag;
+         O.Header.H.Stream_Id := 1;
+         O.Header.H.Length := HPL'Length; -- for demo
+         O.Header.H.Kind := Headers;
+         O.Header.H.R := 0;
+         O.Header.H.Flags := End_Headers_Flag;
 
          --  Set_Payload (O, PL);
          O.Payload := new Stream_Element_Array'(HPL);
 
-         O.H.Length := O.Payload.all'Length;
-         Put_Line ("H: payload " & O.H.Length'Img);
+         O.Header.H.Length := O.Payload.all'Length;
+         Put_Line ("H: payload " & O.Header.H.Length'Img);
       end return;
    end Headers;
 
    function E_Headers return Object is
    begin
       return O : Object do
-         O.H.Stream_Id := 1;
-         O.H.Length := 2; -- for demo
-         O.H.Kind := Headers;
-         O.H.R := 0;
-         O.H.Flags := 0;
+         O.Header.H.Stream_Id := 1;
+         O.Header.H.Length := 2; -- for demo
+         O.Header.H.Kind := Headers;
+         O.Header.H.R := 0;
+         O.Header.H.Flags := 0;
 
          --  Set_Payload (O, PL);
          O.Payload := new Stream_Element_Array'
@@ -342,7 +344,7 @@ package body AWS.HTTP2.Frame is
                              Character'Pos (ASCII.LF));
 
 --         O.H.Length := O.Payload.all'Length;
-         Put_Line ("H: payload " & O.H.Length'Img);
+         Put_Line ("H: payload " & O.Header.H.Length'Img);
       end return;
    end E_Headers;
 
@@ -350,11 +352,11 @@ package body AWS.HTTP2.Frame is
       PL : constant String := "<p>Hello ! from AWS</p>";
    begin
       return O : Object do
-         O.H.Stream_Id := 1;
-         O.H.Length := PL'Length;
-         O.H.Kind := Data;
-         O.H.R := 0;
-         O.H.Flags := End_Stream_Flag;
+         O.Header.H.Stream_Id := 1;
+         O.Header.H.Length := PL'Length;
+         O.Header.H.Kind := Data;
+         O.Header.H.R := 0;
+         O.Header.H.Flags := End_Stream_Flag;
 
          Set_Payload (O, PL);
       end return;
@@ -365,11 +367,11 @@ package body AWS.HTTP2.Frame is
       S  : Stream_Element_Array (1 .. 4) with Address => EC'Address;
    begin
       return O : Object do
-         O.H.Stream_Id := 0;
-         O.H.Length := 4;
-         O.H.Kind := RST_Stream;
-         O.H.R := 0;
-         O.H.Flags := 0;
+         O.Header.H.Stream_Id := 0;
+         O.Header.H.Length := 4;
+         O.Header.H.Kind := RST_Stream;
+         O.Header.H.R := 0;
+         O.Header.H.Flags := 0;
 
          EC.Error_Code := 0;
          O.Payload := new Stream_Element_Array'(S);
@@ -383,7 +385,7 @@ package body AWS.HTTP2.Frame is
    procedure Read (Sock : Net.Socket_Type'Class) is
       Preface : Stream_Element_Array (1 .. 24);
       O       : Object;
-      S       : Stream_Element_Array (1 .. 9) with Address => O'Address;
+--      S       : Stream_Element_Array (1 .. 9) with Address => O'Address;
    begin
       --  First connection start with a preface
       --  This check should not be there!!!
@@ -399,7 +401,7 @@ package body AWS.HTTP2.Frame is
       --  Get Frames
 
       for k in 1 .. 3 loop
-         Net.Buffered.Read (Sock, S);
+         Net.Buffered.Read (Sock, O.Header.S);
          Dump (O);
          Dump_Payload (Sock, O);
 
@@ -428,7 +430,7 @@ package body AWS.HTTP2.Frame is
 --      Send (Sock, Ack_Settings);
 
       for k in 4 .. 4 loop
-         Net.Buffered.Read (Sock, S);
+         Net.Buffered.Read (Sock, O.Header.S);
          Dump (O);
          Dump_Payload (Sock, O);
       end loop;
@@ -448,20 +450,20 @@ package body AWS.HTTP2.Frame is
    begin
       return O : Object do
          --  A settings frame must always have a stream id of 0
-         O.H.Stream_Id := 0;
-         O.H.Length := 0;
-         O.H.Kind := Settings;
-         O.H.R := 0;
-         O.H.Flags := Ack_Flag; -- + End_Stream_Flag;
+         O.Header.H.Stream_Id := 0;
+         O.Header.H.Length := 0;
+         O.Header.H.Kind := Settings;
+         O.Header.H.R := 0;
+         O.Header.H.Flags := Ack_Flag; -- + End_Stream_Flag;
       end return;
    end Ack_Settings;
 
    procedure Send (Sock : Net.Socket_Type'Class; O : Object) is
       use type Utils.Stream_Element_Array_Access;
-      S : Stream_Element_Array (1 .. 9) with Address => O'Address;
+--      S : Stream_Element_Array (1 .. 9) with Address => O'Address;
    begin
-      Dump ("send", S);
-      Net.Buffered.Write (Sock, S);
+      Dump ("send", O.Header.S);
+      Net.Buffered.Write (Sock, O.Header.S);
       Net.Buffered.Flush (Sock);
 
       if O.Payload /= null then

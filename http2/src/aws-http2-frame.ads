@@ -27,6 +27,9 @@
 --  covered by the  GNU Public License.                                     --
 ------------------------------------------------------------------------------
 
+with Ada.Finalization;
+with Ada.Streams;
+
 with System;
 
 with AWS.Net;
@@ -34,7 +37,9 @@ with AWS.Utils;
 
 package AWS.HTTP2.Frame is
 
-   type Object is private;
+   use Ada;
+
+   type Object is new Finalization.Controlled with private;
 
    type Kind_Type is (Data, Headers, Priority,
                       RST_Stream, Settings, Push_Promise,
@@ -77,6 +82,9 @@ package AWS.HTTP2.Frame is
    procedure Send (Sock : Net.Socket_Type'Class; O : Object);
 
 private
+
+   use Ada;
+   use Ada.Streams;
 
    End_Stream_Flag  : constant Flags_Type := 16#01#;
    Ack_Flag         : constant Flags_Type := 16#01#;
@@ -133,7 +141,7 @@ private
       R         : Bit_1;
       Stream_Id : Natural range 0 .. 2 ** 31 - 1;
    end record
-     with Dynamic_Invariant =>
+     with Dynamic_Predicate =>
             (if Kind = Window_Update then Length = 4)
             and then
             (if Kind = Headers then Stream_Id > 0);
@@ -158,8 +166,15 @@ private
       Stream_Id at 5 range 1 .. 31;
    end record;
 
-   type Object is record
-      H       : Header;
+   type Header_View (Flat : Boolean := False) is record
+      case Flat is
+         when False => H : Header;
+         when True  => S : Stream_Element_Array (1 .. Header'Size / 8);
+      end case;
+   end record with Unchecked_Union;
+
+   type Object is new Finalization.Controlled with record
+      Header  : Header_View;
       Payload : Utils.Stream_Element_Array_Access;
    end record;
 
