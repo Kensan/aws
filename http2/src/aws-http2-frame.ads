@@ -42,7 +42,7 @@ package AWS.HTTP2.Frame is
 
    type Object is new Finalization.Controlled with private;
 
-   type Kind_Type is (Data, Headers, Priority,
+   type Kind_Type is (K_Data, Headers, Priority,
                       RST_Stream, K_Settings, Push_Promise,
                       Ping, GoAway, Window_Update, Continuation)
      with Size => 8;
@@ -84,7 +84,7 @@ private
    Padded_Flag      : constant Flags_Type := 16#08#;
    Priority_Flag    : constant Flags_Type := 16#20#;
 
-   for Kind_Type use (Data          => 16#0#,
+   for Kind_Type use (K_Data          => 16#0#,
                       Headers       => 16#1#,
                       Priority      => 16#2#,
                       RST_Stream    => 16#3#,

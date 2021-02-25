@@ -34,6 +34,7 @@ with Ada.Streams;
 
 with AWS.Net.Buffered;
 with AWS.HPACK;
+with AWS.HTTP2.Frame.Data;
 with AWS.HTTP2.Frame.Settings;
 
 package body AWS.HTTP2.Frame is
@@ -43,12 +44,6 @@ package body AWS.HTTP2.Frame is
    use System;
 
    pragma Warnings (Off, "overlay changes scalar storage order");
-
-   Connection_Preface : constant Stream_Element_Array :=
-                          (16#50#, 16#52#, 16#49#, 16#20#, 16#2a#, 16#20#,
-                           16#48#, 16#54#, 16#54#, 16#50#, 16#2f#, 16#32#,
-                           16#2e#, 16#30#, 16#0d#, 16#0a#, 16#0d#, 16#0a#,
-                           16#53#, 16#4d#, 16#0d#, 16#0a#, 16#0d#, 16#0a#);
 
    --  RFC-7540 6.2
    --
@@ -276,17 +271,6 @@ package body AWS.HTTP2.Frame is
       end if;
    end Dump_Payload;
 
-   --  function Settings return Object is
-   --  begin
-   --     return O : Object do
-   --        O.Header.H.Stream_Id := 0;
-   --        O.Header.H.Length := 6; -- for demo
-   --        O.Header.H.Kind := Settings;
-   --        O.Header.H.R := 0;
-   --        O.Header.H.Flags := 0; -- End_Stream_Flag;
-   --     end return;
-   --  end Settings;
-
    procedure Set_Payload (O : in out Object; Payload : String) is
    begin
       O.Header.H.Length := Payload'Length;
@@ -336,20 +320,6 @@ package body AWS.HTTP2.Frame is
       end return;
    end E_Headers;
 
-   function Data return Object is
-      PL : constant String := "<p>Hello ! from AWS</p>";
-   begin
-      return O : Object do
-         O.Header.H.Stream_Id := 1;
-         O.Header.H.Length := PL'Length;
-         O.Header.H.Kind := Data;
-         O.Header.H.R := 0;
-         O.Header.H.Flags := End_Stream_Flag;
-
-         Set_Payload (O, PL);
-      end return;
-   end Data;
-
    function RST return Object is
       EC : RST_Stream_Payload;
       S  : Stream_Element_Array (1 .. 4) with Address => EC'Address;
@@ -371,21 +341,8 @@ package body AWS.HTTP2.Frame is
    ----------
 
    procedure Go (Sock : Net.Socket_Type'Class) is
---      Preface : Stream_Element_Array (1 .. 24);
-      O       : Object;
---      S       : Stream_Element_Array (1 .. 9) with Address => O'Address;
+      O : Object;
    begin
-      --  First connection start with a preface
-      --  This check should not be there!!!
---      Net.Buffered.Read (Sock, Preface);
-
-      --  if Preface = Connection_Preface then
-      --     Put_Line ("connection preface ok");
-      --  else
-      --     --  Should be a PROTOCOL_ERROR
-      --     Put_Line ("connection preface NOT ok");
-      --  end if;
-
       --  Get Frames
 
       for k in 1 .. 3 loop
@@ -396,31 +353,23 @@ package body AWS.HTTP2.Frame is
             Dump (F);
             Dump_Payload (Sock, F);
          end;
---         if K = 1 then
---            Send (Sock, Ack_Settings);
---         end if;
       end loop;
 
       --  Answer settings payload
 
---      Send (Sock, Settings);
       declare
         SP : Settings.Payload;
---        X  : Stream_Element_Array (1 .. 6) with Address => SP'Address;
       begin
         SP.Id := Settings.MAX_CONCURRENT_STREAMS;
         SP.Value := 326;
 
         Send (Sock, Settings.Create (Settings.Set'(1 => SP)));
---        Net.Buffered.Write (Sock, X);
       end;
       Net.Buffered.Flush (Sock);
 
       Put_Line ("@@@ Try answering");
 
       --  Try sending an answer
-
---      Send (Sock, Ack_Settings);
 
       for k in 4 .. 4 loop
          declare
@@ -434,11 +383,9 @@ package body AWS.HTTP2.Frame is
       Send (Sock, Settings.Ack);
 
       Send (Sock, Headers);
---      Send (Sock, E_Headers);
 
-      Send (Sock, Data);
+      Send (Sock, Frame.Data.Create ("<p>Hello ! from AWS</p>"));
 
---      Send (Sock, RST);
       delay 5.0;
    end Go;
 
@@ -448,6 +395,8 @@ package body AWS.HTTP2.Frame is
       Net.Buffered.Read (Sock, H.Header.S);
 
       case H.Header.H.Kind is
+         when K_Data =>
+            return Frame.Data.Read (Sock, H);
          when K_Settings =>
             return Frame.Settings.Read (Sock, H);
          when Others =>
@@ -455,25 +404,13 @@ package body AWS.HTTP2.Frame is
       end case;
    end Read;
 
-   --  function Ack_Settings return Object is
-   --  begin
-   --     return O : Object do
-   --        --  A settings frame must always have a stream id of 0
-   --        O.Header.H.Stream_Id := 0;
-   --        O.Header.H.Length := 0;
-   --        O.Header.H.Kind := Settings;
-   --        O.Header.H.R := 0;
-   --        O.Header.H.Flags := Ack_Flag; -- + End_Stream_Flag;
-   --     end return;
-   --  end Ack_Settings;
-
    procedure Send (Sock : Net.Socket_Type'Class; O : Object'Class) is
       use type Utils.Stream_Element_Array_Access;
    begin
       Dump ("send", O.Header.S);
       Net.Buffered.Write (Sock, O.Header.S);
 
-      if O.Header.H.Kind = K_Settings
+      if O.Header.H.Kind in K_Settings | K_Data
          and then O.Header.H.Length > 0
       then
          Send_Payload (Sock, Object'Class (O));
