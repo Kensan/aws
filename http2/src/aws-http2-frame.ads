@@ -42,7 +42,7 @@ package AWS.HTTP2.Frame is
 
    type Object is new Finalization.Controlled with private;
 
-   type Kind_Type is (K_Data, Headers, Priority,
+   type Kind_Type is (K_Data, k_Headers, K_Priority,
                       RST_Stream, K_Settings, Push_Promise,
                       Ping, GoAway, Window_Update, Continuation)
      with Size => 8;
@@ -85,8 +85,8 @@ private
    Priority_Flag    : constant Flags_Type := 16#20#;
 
    for Kind_Type use (K_Data          => 16#0#,
-                      Headers       => 16#1#,
-                      Priority      => 16#2#,
+                      k_Headers       => 16#1#,
+                      K_Priority      => 16#2#,
                       RST_Stream    => 16#3#,
                       K_Settings      => 16#4#,
                       Push_Promise  => 16#5#,
@@ -121,8 +121,10 @@ private
    end record
      with Dynamic_Predicate =>
             (if Kind = Window_Update then Length = 4)
-            and then
-            (if Kind = Headers then Stream_Id > 0);
+              and then
+            (if Kind = K_Headers then Stream_Id > 0)
+              and then
+            R = 0;
 
    --  +-----------------------------------------------+
    --  |                 Length (24)                   |
@@ -154,6 +156,18 @@ private
    type Object is new Finalization.Controlled with record
       Header  : Header_View;
       Payload : Utils.Stream_Element_Array_Access;
+   end record;
+
+   --  Shared payload object in Data and Headers
+
+   type Padding is record
+      Pad_Length : Byte_1;
+   end record;
+
+   for Padding'Bit_Order use System.High_Order_First;
+   for Padding'Scalar_Storage_Order use System.High_Order_First;
+   for Padding use record
+      Pad_Length at 0 range 0 .. 7;
    end record;
 
 end AWS.HTTP2.Frame;

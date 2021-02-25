@@ -27,47 +27,47 @@
 --  covered by the  GNU Public License.                                     --
 ------------------------------------------------------------------------------
 
-with AWS.Net.Buffered;
+with System;
 
-package AWS.HTTP2.Frame.Data is
+package AWS.HTTP2.Frame.Priority is
 
    use Ada;
 
    type Object is new Frame.Object with private;
 
-   function Read
-     (Sock   : Net.Socket_Type'Class;
-      Header : Frame.Object) return Object;
-
-   function Create (Content : String) return Object;
-
-   procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object);
-
-   procedure Dump (O : Object);
+   type Payload is record
+      E                 : Bit_1;
+      Stream_Dependency : Byte_4 range 0 .. 2 ** 31 - 1;
+      Weight            : Byte_1;
+   end record;
 
 private
 
-   --  RFC-7540 6.1
+   --  RFC-7540 6.3
    --
-   --  +---------------+
-   --  |Pad Length? (8)|
-   --  +---------------+-----------------------------------------------+
-   --  |                            Data (*)                         ...
-   --  +---------------------------------------------------------------+
-   --  |                           Padding (*)                       ...
-   --  +---------------------------------------------------------------+
+   --  +-+-------------------------------------------------------------+
+   --  |E|                  Stream Dependency (31)                     |
+   --  +-+-------------+-----------------------------------------------+
+   --  |   Weight (8)  |
+   --  +-+-------------+
+
+   for Payload'Bit_Order use System.High_Order_First;
+   for Payload'Scalar_Storage_Order use System.High_Order_First;
+   for Payload use record
+      E                 at 0 range 31 .. 31;
+      Stream_Dependency at 0 range  0 .. 30;
+      Weight            at 4 range  0 ..  8;
+   end record;
 
    type Payload_View (Flat : Boolean := False) is record
       case Flat is
-         when False => P : Padding;
-         when True =>  S : Utils.Stream_Element_Array_Access;
+         when False => P : Payload;
+         when True =>  S : Stream_Element_Array (1 .. Payload'Size / 8);
       end case;
    end record with Unchecked_Union;
-
-   type Payload_View_Access is access all Payload_View;
 
    type Object is new Frame.Object with record
       Data : Payload_View;
    end record;
 
-end AWS.HTTP2.Frame.Data;
+end AWS.HTTP2.Frame.Priority;

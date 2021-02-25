@@ -32,9 +32,11 @@ with Ada.Text_IO; use Ada.Text_IO;
 
 with Ada.Streams;
 
+with AWS.Headers;
 with AWS.Net.Buffered;
 with AWS.HPACK;
 with AWS.HTTP2.Frame.Data;
+with AWS.HTTP2.Frame.Headers;
 with AWS.HTTP2.Frame.Settings;
 
 package body AWS.HTTP2.Frame is
@@ -258,7 +260,7 @@ package body AWS.HTTP2.Frame is
       elsif O.Header.H.Kind = Window_Update then
          Dump_Window_Update;
 
-      elsif O.Header.H.Kind = Headers then
+      elsif O.Header.H.Kind = K_Headers then
          Dump_Headers;
 
       else
@@ -283,30 +285,30 @@ package body AWS.HTTP2.Frame is
       end loop;
    end Set_Payload;
 
-   function Headers return Object is
-      HPL : constant Stream_Element_Array := HPACK.Encode;
-   begin
-      return O : Object do
-         O.Header.H.Stream_Id := 1;
-         O.Header.H.Length := HPL'Length; -- for demo
-         O.Header.H.Kind := Headers;
-         O.Header.H.R := 0;
-         O.Header.H.Flags := End_Headers_Flag;
+   --  function Headers return Object is
+   --     HPL : constant Stream_Element_Array := HPACK.Encode;
+   --  begin
+   --     return O : Object do
+   --        O.Header.H.Stream_Id := 1;
+   --        O.Header.H.Length := HPL'Length; -- for demo
+   --        O.Header.H.Kind := Headers;
+   --        O.Header.H.R := 0;
+   --        O.Header.H.Flags := End_Headers_Flag;
 
-         --  Set_Payload (O, PL);
-         O.Payload := new Stream_Element_Array'(HPL);
+   --        --  Set_Payload (O, PL);
+   --        O.Payload := new Stream_Element_Array'(HPL);
 
-         O.Header.H.Length := O.Payload.all'Length;
-         Put_Line ("H: payload " & O.Header.H.Length'Img);
-      end return;
-   end Headers;
+   --        O.Header.H.Length := O.Payload.all'Length;
+   --        Put_Line ("H: payload " & O.Header.H.Length'Img);
+   --     end return;
+   --  end Headers;
 
    function E_Headers return Object is
    begin
       return O : Object do
          O.Header.H.Stream_Id := 1;
          O.Header.H.Length := 2; -- for demo
-         O.Header.H.Kind := Headers;
+         O.Header.H.Kind := K_Headers;
          O.Header.H.R := 0;
          O.Header.H.Flags := 0;
 
@@ -382,7 +384,7 @@ package body AWS.HTTP2.Frame is
 
       Send (Sock, Settings.Ack);
 
-      Send (Sock, Headers);
+      Send (Sock, Frame.Headers.Create (AWS.Headers.Empty_List));
 
       Send (Sock, Frame.Data.Create ("<p>Hello ! from AWS</p>"));
 
@@ -410,7 +412,7 @@ package body AWS.HTTP2.Frame is
       Dump ("send", O.Header.S);
       Net.Buffered.Write (Sock, O.Header.S);
 
-      if O.Header.H.Kind in K_Settings | K_Data
+      if O.Header.H.Kind in K_Settings | K_Data | K_Headers
          and then O.Header.H.Length > 0
       then
          Send_Payload (Sock, Object'Class (O));

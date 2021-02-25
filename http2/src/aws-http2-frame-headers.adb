@@ -28,46 +28,37 @@
 ------------------------------------------------------------------------------
 
 with AWS.Net.Buffered;
+with AWS.HPACK;
 
-package AWS.HTTP2.Frame.Data is
-
-   use Ada;
-
-   type Object is new Frame.Object with private;
+package body AWS.HTTP2.Frame.Headers is
 
    function Read
      (Sock   : Net.Socket_Type'Class;
-      Header : Frame.Object) return Object;
+      Header : Frame.Object) return Object
+   is
+      O : Object;
+   begin
+      return O;
+   end Read;
 
-   function Create (Content : String) return Object;
+   function Create (List : AWS.Headers.List) return Object is
+   begin
+      return O : Object do
+         if List.Length > 0 then
+            O.Data.S := new Stream_Element_Array'(HPACK.Encode);
+         end if;
 
-   procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object);
+         O.Header.H.Stream_Id := 1;
+         O.Header.H.Length    := Length_Type (O.Data.S'Length);
+         O.Header.H.Kind      := K_Headers;
+         O.Header.H.R         := 0;
+         O.Header.H.Flags     := End_Headers_Flag;
+      end return;
+   end Create;
 
-   procedure Dump (O : Object);
+   procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object) is
+   begin
+      Net.Buffered.Write (Sock, O.Data.S.all);
+   end Send_Payload;
 
-private
-
-   --  RFC-7540 6.1
-   --
-   --  +---------------+
-   --  |Pad Length? (8)|
-   --  +---------------+-----------------------------------------------+
-   --  |                            Data (*)                         ...
-   --  +---------------------------------------------------------------+
-   --  |                           Padding (*)                       ...
-   --  +---------------------------------------------------------------+
-
-   type Payload_View (Flat : Boolean := False) is record
-      case Flat is
-         when False => P : Padding;
-         when True =>  S : Utils.Stream_Element_Array_Access;
-      end case;
-   end record with Unchecked_Union;
-
-   type Payload_View_Access is access all Payload_View;
-
-   type Object is new Frame.Object with record
-      Data : Payload_View;
-   end record;
-
-end AWS.HTTP2.Frame.Data;
+end AWS.HTTP2.Frame.Headers;

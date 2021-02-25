@@ -27,9 +27,12 @@
 --  covered by the  GNU Public License.                                     --
 ------------------------------------------------------------------------------
 
-with AWS.Net.Buffered;
+with System;
 
-package AWS.HTTP2.Frame.Data is
+with AWS.Headers;
+with AWS.HTTP2.Frame.Priority;
+
+package AWS.HTTP2.Frame.Headers is
 
    use Ada;
 
@@ -39,27 +42,19 @@ package AWS.HTTP2.Frame.Data is
      (Sock   : Net.Socket_Type'Class;
       Header : Frame.Object) return Object;
 
-   function Create (Content : String) return Object;
+   function Create (List : AWS.Headers.List) return Object;
 
    procedure Send_Payload (Sock : Net.Socket_Type'Class; O : Object);
 
-   procedure Dump (O : Object);
+   procedure Dump (O : Object) is null;
 
 private
 
-   --  RFC-7540 6.1
-   --
-   --  +---------------+
-   --  |Pad Length? (8)|
-   --  +---------------+-----------------------------------------------+
-   --  |                            Data (*)                         ...
-   --  +---------------------------------------------------------------+
-   --  |                           Padding (*)                       ...
-   --  +---------------------------------------------------------------+
-
    type Payload_View (Flat : Boolean := False) is record
       case Flat is
-         when False => P : Padding;
+         when False => Pad  : Padding;
+                       Prio : Frame.Priority.Payload;
+
          when True =>  S : Utils.Stream_Element_Array_Access;
       end case;
    end record with Unchecked_Union;
@@ -70,4 +65,4 @@ private
       Data : Payload_View;
    end record;
 
-end AWS.HTTP2.Frame.Data;
+end AWS.HTTP2.Frame.Headers;
