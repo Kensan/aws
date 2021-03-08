@@ -115,7 +115,7 @@ private
       Kind      : Kind_Type;
       Flags     : Flags_Type;
       R         : Bit_1;
-      Stream_Id : Natural range 0 .. 2 ** 31 - 1;
+      Stream_Id : HTTP2.Stream_Id;
    end record
      with Dynamic_Predicate =>
             (if Kind = K_Window_Update then Length = 4)

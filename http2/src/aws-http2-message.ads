@@ -27,15 +27,16 @@
 --  covered by the  GNU Public License.                                     --
 ------------------------------------------------------------------------------
 
-package AWS.HTTP2 with Pure is
+with AWS.Headers;
 
-   type Bit_1 is mod 2 ** 1 with Size => 1;
+package AWS.HTTP2.Message is
 
-   type Byte_1 is mod 2 **  8 with Size => 8;
-   type Byte_2 is mod 2 ** 16 with Size => 16;
-   type Byte_3 is mod 2 ** 24 with Size => 24;
-   type Byte_4 is mod 2 ** 32 with Size => 32;
+   type Object is tagged private;
 
-   type Stream_Id is new Natural range 0 .. 2 ** 31 - 1;
+   function Headers (Self : in Object) return AWS.Headers.List;
 
-end AWS.HTTP2;
+private
+
+   type Object is tagged null record;
+
+end AWS.HTTP2.Message;

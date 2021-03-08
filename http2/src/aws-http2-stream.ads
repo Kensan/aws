@@ -27,15 +27,39 @@
 --  covered by the  GNU Public License.                                     --
 ------------------------------------------------------------------------------
 
-package AWS.HTTP2 with Pure is
+with AWS.HTTP2.Frame;
+with AWS.HTTP2.Message;
 
-   type Bit_1 is mod 2 ** 1 with Size => 1;
+package AWS.HTTP2.Stream is
 
-   type Byte_1 is mod 2 **  8 with Size => 8;
-   type Byte_2 is mod 2 ** 16 with Size => 16;
-   type Byte_3 is mod 2 ** 24 with Size => 24;
-   type Byte_4 is mod 2 ** 32 with Size => 32;
+   type State_Kind is (Idle, Reserved, Open, Half_Closed, Closed);
 
-   type Stream_Id is new Natural range 0 .. 2 ** 31 - 1;
+   type Object is tagged private;
 
-end AWS.HTTP2;
+   subtype Id is Stream_Id;
+
+   function Create (Identifier : Id) return Object
+     with Post => Create'Result.State = Idle;
+
+   function State (Self : Object) return State_Kind;
+
+   function Identifier (Self : Object) return Id;
+
+   procedure Push_Frame
+     (Self  : in out Object;
+      Frame : HTTP2.Frame.Object'Class);
+
+   function Message (Self : Object) return HTTP2.Message.Object;
+
+private
+
+   type Object is tagged record
+      Id    : Stream.Id;
+      State : State_Kind;
+   end record;
+
+   function State (Self : Object) return State_Kind is (Self.State);
+
+   function Identifier (Self : Object) return Id is (Self.Id);
+
+end AWS.HTTP2.Stream;
