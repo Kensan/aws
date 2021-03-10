@@ -46,6 +46,8 @@ with AWS.Server.Status;
 with AWS.Status.Set;
 with AWS.Utils;
 
+with AWS.HTTP2.Frame;
+
 pragma Warnings (Off);
 
 separate (AWS.Server)
@@ -63,7 +65,8 @@ procedure Protocol_Handler_V2 (LA : in out Line_Attribute_Record) is
                                  CNF.Case_Sensitive_Parameters
                                    (LA.Server.Properties);
 
-   Sock_Ptr     : Socket_Access;
+   Sock_Ptr     : Socket_Access :=
+                    LA.Server.Slots.Get (Index => LA.Line).Sock;
 
    Socket_Taken : Boolean := False;
    --  Set to True if a socket has been reserved for a push session
@@ -93,7 +96,7 @@ begin
 
    LA.Log_Data := AWS.Log.Empty_Fields_Table;
 
-   For_Every_Request : loop
+   For_Every_Frame : loop
       declare
          use Ada.Streams;
          use type Response.Data_Mode;
@@ -102,62 +105,19 @@ begin
 
          Error_Answer : Response.Data;
          Back_OK      : Boolean;
-         First_Line   : Boolean := True;
-         Switch       : constant array (Boolean) of
-                          not null access function
-                            (Socket : Net.Socket_Type'Class;
-                             Events : Net.Wait_Event_Set) return Net.Event_Set
-                          := (True  => Net.Wait'Access,
-                              False => Net.Check'Access);
 
-         function Send_Error_Answer return Boolean;
-         --  Send Error_Answer to the client, returns False if an(other)
-         --  error occurs while trying to send the error answer.
-
-         -----------------------
-         -- Send_Error_Answer --
-         -----------------------
-
-         function Send_Error_Answer return Boolean is
-         begin
-            Send
-              (Error_Answer, LA.Server.all, LA.Line, LA.Stat, Socket_Taken,
-               Will_Close);
-            return True;
-
-         exception
-            when Net.Socket_Error =>
-               Will_Close := True;
-               return False;
-
-            when E : others =>
-               AWS.Log.Write
-                 (LA.Server.Error_Log,
-                  LA.Stat,
-                  Utils.CRLF_2_Spaces
-                    (Ada.Exceptions.Exception_Information (E)));
-               return False;
-         end Send_Error_Answer;
-
+         Frame        : HTTP2.Frame.Object'Class :=
+                          HTTP2.Frame.Read (Sock_Ptr.all);
       begin
          Put_Line ("Switched in v2 protocol...");
          delay 1.0;
 
          Response.Set.Mode (Error_Answer, Response.No_Data);
 
-         LA.Server.Slots.Mark_Phase (LA.Line, Client_Header);
 
-         if Sock_Ptr = null then
-            --  First arrived. We do not need to wait for fast comming next
-            --  keep alive request.
-
-            Sock_Ptr := LA.Server.Slots.Get (Index => LA.Line).Sock;
-         end if;
-
-         --  Let's try to create a hand made HTTP/2 request/response
 
       end;
-   end loop For_Every_Request;
+   end loop For_Every_Frame;
 
    --  Release memory for local objects
 

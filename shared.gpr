@@ -117,13 +117,13 @@ abstract project Shared is
    Global_Options := ();
    --  Options used for all Ada units in both Debug and Release modes
 
-   Common_Options :=
-     ("-gnat2012", "-gnatwcfijkmruv", "-gnaty3abBcdefhiIklmnoOprstx")
-     & Global_Options;
+   Common_Options := ();
+--     ("-gnat2012", "-gnatwcfijkmruv", "-gnaty3abBcdefhiIklmnoOprstx")
+--     & Global_Options;
    --  Common options used for the Debug and Release modes
 
    Debug_Options :=
-     ("-g", "-gnata", "-gnatVa", "-gnatQ", "-gnato", "-gnatwe", "-Wall");
+     ("-g", "-gnata"); -- , "-gnatVa", "-gnatQ", "-gnato", "-gnatwe", "-Wall");
 
    Release_Options :=
      ("-O2", "-gnatn");

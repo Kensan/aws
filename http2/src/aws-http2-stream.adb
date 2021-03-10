@@ -38,4 +38,25 @@ package body AWS.HTTP2.Stream is
       return Object'(Identifier, Idle);
    end Create;
 
+   -------------
+   -- Message --
+   -------------
+
+   function Message (Self : Object) return HTTP2.Message.Object is
+      O : HTTP2.Message.Object;
+   begin
+      return O;
+   end Message;
+
+   ----------------
+   -- Push_Frame --
+   ----------------
+
+   procedure Push_Frame
+     (Self  : in out Object;
+      Frame : HTTP2.Frame.Object'Class) is
+   begin
+      null;
+   end Push_Frame;
+
 end AWS.HTTP2.Stream;
