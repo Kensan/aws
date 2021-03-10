@@ -47,6 +47,8 @@ with AWS.Status.Set;
 with AWS.Utils;
 
 with AWS.HTTP2.Frame;
+with AWS.HTTP2.Message;
+with AWS.HTTP2.Stream;
 
 pragma Warnings (Off);
 
@@ -60,10 +62,30 @@ procedure Protocol_Handler_V2 (LA : in out Line_Attribute_Record) is
 
    use Ada.Text_IO;
    use AWS.Server.HTTP_Utils;
+   use type HTTP2.Stream_Id;
 
-   Case_Sensitive_Parameters : constant Boolean :=
-                                 CNF.Case_Sensitive_Parameters
-                                   (LA.Server.Properties);
+   procedure Handle_Control_Frame (Frame : HTTP2.Frame.Object'Class);
+
+   procedure Handle_Message (Stream : HTTP2.Stream.Object);
+
+   --------------------------
+   -- Handle_Control_Frame --
+   --------------------------
+
+   procedure Handle_Control_Frame (Frame : HTTP2.Frame.Object'Class) is
+   begin
+      null;
+   end Handle_Control_Frame;
+
+   --------------------
+   -- Handle_Message --
+   --------------------
+
+   procedure Handle_Message (Stream : HTTP2.Stream.Object) is
+      M : constant HTTP2.Message.Object := Stream.Message;
+   begin
+      null;
+   end Handle_Message;
 
    Sock_Ptr     : Socket_Access :=
                     LA.Server.Slots.Get (Index => LA.Line).Sock;
@@ -88,6 +110,8 @@ procedure Protocol_Handler_V2 (LA : in out Line_Attribute_Record) is
    Multislots   : constant Boolean :=
                     CNF.Max_Connection (LA.Server.Properties) > 1;
 
+   S : array (HTTP2.Stream_Id range 1 .. 100) of HTTP2.Stream.Object;
+
 begin
    --  This new connection has been initialized because some data are being
    --  sent. We are by default using HTTP/1.1 persistent connection. We will
@@ -108,14 +132,23 @@ begin
 
          Frame        : HTTP2.Frame.Object'Class :=
                           HTTP2.Frame.Read (Sock_Ptr.all);
+         Stream_Id    : constant HTTP2.Stream_Id := Frame.Stream_Id;
       begin
          Put_Line ("Switched in v2 protocol...");
          delay 1.0;
 
          Response.Set.Mode (Error_Answer, Response.No_Data);
 
+         if Stream_Id = 0 then
+            Handle_Control_Frame (Frame);
 
+         else
+            S (Stream_Id).Push_Frame (Frame);
 
+            if S (Stream_Id).Is_Message_Ready then
+               Handle_Message (S (Stream_Id));
+            end if;
+         end if;
       end;
    end loop For_Every_Frame;
 

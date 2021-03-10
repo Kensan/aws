@@ -72,6 +72,10 @@ package AWS.HTTP2.Frame is
 
    procedure Go (Sock : Net.Socket_Type'Class);
 
+   function Kind (Self : Object) return Kind_Type;
+
+   function Stream_Id (Self : Object) return HTTP2.Stream_Id;
+
 private
 
    use Ada;
@@ -167,5 +171,11 @@ private
    for Padding use record
       Pad_Length at 0 range 0 .. 7;
    end record;
+
+   function Kind (Self : Object) return Kind_Type is
+     (Self.Header.H.Kind);
+
+   function Stream_Id (Self : Object) return HTTP2.Stream_Id is
+     (Self.Header.H.Stream_Id);
 
 end AWS.HTTP2.Frame;

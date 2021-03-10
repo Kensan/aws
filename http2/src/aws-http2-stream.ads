@@ -49,7 +49,10 @@ package AWS.HTTP2.Stream is
      (Self  : in out Object;
       Frame : HTTP2.Frame.Object'Class);
 
-   function Message (Self : Object) return HTTP2.Message.Object;
+   function Is_Message_Ready (Self : Object) return Boolean;
+
+   function Message (Self : Object) return HTTP2.Message.Object
+     with Pre => Self.Is_Message_Ready;
 
 private
 
