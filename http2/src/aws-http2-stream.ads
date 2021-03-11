@@ -29,6 +29,7 @@
 
 with AWS.HTTP2.Frame;
 with AWS.HTTP2.Message;
+with AWS.HTTP2.Frame.List;
 
 package AWS.HTTP2.Stream is
 
@@ -49,7 +50,8 @@ package AWS.HTTP2.Stream is
      (Self  : in out Object;
       Frame : HTTP2.Frame.Object'Class);
 
-   function Is_Message_Ready (Self : Object) return Boolean;
+   function Is_Message_Ready (Self : Object) return Boolean
+     with Post => (if Is_Message_Ready'Result then Self.State >= Open);
 
    function Message (Self : Object) return HTTP2.Message.Object
      with Pre => Self.Is_Message_Ready;
@@ -57,8 +59,10 @@ package AWS.HTTP2.Stream is
 private
 
    type Object is tagged record
-      Id    : Stream.Id;
-      State : State_Kind;
+      Id        : Stream.Id;
+      State     : State_Kind;
+      Frames    : Frame.List.Object;
+      Is_Ready  : Boolean := False;
    end record;
 
    function State (Self : Object) return State_Kind is (Self.State);

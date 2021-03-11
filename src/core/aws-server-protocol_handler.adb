@@ -266,6 +266,7 @@ begin
 
          if AWS.Status.Protocol (LA.Stat) = AWS.Status.Upgrade_To_HTTP_2 then
             AWS.Status.Set.Protocol (LA.Stat, AWS.Status.HTTP_2);
+
             Protocol_Handler_V2 (LA);
 
             Will_Close := True;

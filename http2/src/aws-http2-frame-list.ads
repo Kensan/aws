@@ -27,45 +27,14 @@
 --  covered by the  GNU Public License.                                     --
 ------------------------------------------------------------------------------
 
-package body AWS.HTTP2.Stream is
+with Ada.Containers.Indefinite_Vectors;
 
-   ------------
-   -- Create --
-   ------------
+package AWS.HTTP2.Frame.List is
 
-   function Create (Identifier : Id) return Object is
-   begin
-      return Object'(Identifier, Idle, Frame.List.Empty_List, False);
-   end Create;
+   package List is new Containers.Indefinite_Vectors (Positive, Object'Class);
 
-   ----------------------
-   -- Is_Message_Ready --
-   ----------------------
+   subtype Object is List.Vector;
 
-   function Is_Message_Ready (Self : Object) return Boolean is
-   begin
-      return Self.Is_Ready;
-   end Is_Message_Ready;
+   Empty_List : constant Object := List.Empty_Vector;
 
-   -------------
-   -- Message --
-   -------------
-
-   function Message (Self : Object) return HTTP2.Message.Object is
-      O : HTTP2.Message.Object;
-   begin
-      return O;
-   end Message;
-
-   ----------------
-   -- Push_Frame --
-   ----------------
-
-   procedure Push_Frame
-     (Self  : in out Object;
-      Frame : HTTP2.Frame.Object'Class) is
-   begin
-      Self.Frames.Append (Frame);
-   end Push_Frame;
-
-end AWS.HTTP2.Stream;
+end AWS.HTTP2.Frame.List;

@@ -285,7 +285,7 @@ begin
 
    AWS.Net.Log.Start (Write_Callback'Unrestricted_Access);
 
-   Local_Check;
+--   Local_Check;
 
    --  AWS.Headers.Debug (True);
 

@@ -34,6 +34,7 @@ pragma Warnings (Off);
 pragma Style_Checks (Off);
 
 with Ada.Exceptions;
+with Ada.Streams;
 with Ada.Text_IO;
 
 with AWS.Log;
@@ -61,6 +62,8 @@ procedure Protocol_Handler_V2 (LA : in out Line_Attribute_Record) is
    --
 
    use Ada.Text_IO;
+   use Ada.Streams;
+
    use AWS.Server.HTTP_Utils;
    use type HTTP2.Stream_Id;
 
@@ -74,7 +77,7 @@ procedure Protocol_Handler_V2 (LA : in out Line_Attribute_Record) is
 
    procedure Handle_Control_Frame (Frame : HTTP2.Frame.Object'Class) is
    begin
-      null;
+      Put_Line ("CTRL: " & Frame.Kind'Img);
    end Handle_Control_Frame;
 
    --------------------
@@ -119,6 +122,23 @@ begin
    --  waiting for a request.
 
    LA.Log_Data := AWS.Log.Empty_Fields_Table;
+
+   --  When swicthing protocol the first bytes are a preface
+
+   declare
+      Connection_Preface : constant Stream_Element_Array :=
+                             (16#50#, 16#52#, 16#49#, 16#20#, 16#2a#, 16#20#,
+                              16#48#, 16#54#, 16#54#, 16#50#, 16#2f#, 16#32#,
+                              16#2e#, 16#30#, 16#0d#, 16#0a#, 16#0d#, 16#0a#,
+                              16#53#, 16#4d#, 16#0d#, 16#0a#, 16#0d#, 16#0a#);
+      Preface            : Stream_Element_Array (1 .. 24);
+   begin
+      Net.Buffered.Read (Sock_Ptr.all, Preface);
+
+      if Preface /= Connection_Preface then
+         raise Constraint_Error with "connection preface not found";
+      end if;
+   end;
 
    For_Every_Frame : loop
       declare
