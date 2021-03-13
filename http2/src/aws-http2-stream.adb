@@ -65,7 +65,10 @@ package body AWS.HTTP2.Stream is
      (Self  : in out Object;
       Frame : HTTP2.Frame.Object'Class) is
    begin
+      Frame.Dump;
       Self.Frames.Append (Frame);
+
+
    end Push_Frame;
 
 end AWS.HTTP2.Stream;

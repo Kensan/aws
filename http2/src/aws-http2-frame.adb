@@ -132,6 +132,7 @@ package body AWS.HTTP2.Frame is
    function Read (Sock : Net.Socket_Type'Class) return Object'Class is
       H : Object;
    begin
+      --  ?? we can do this case with directly in Ada with dispatching.
       Net.Buffered.Read (Sock, H.Header.S);
 
       case H.Header.H.Kind is

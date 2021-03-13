@@ -43,8 +43,8 @@ package AWS.HTTP2.Frame is
    type Object is new Finalization.Controlled with private;
 
    type Kind_Type is (K_Data, k_Headers, K_Priority,
-                      K_RST_Stream, K_Settings, Push_Promise,
-                      Ping, GoAway, K_Window_Update, Continuation)
+                      K_RST_Stream, K_Settings, K_Push_Promise,
+                      K_Ping, K_GoAway, K_Window_Update, K_Continuation)
      with Size => 8;
    --  Frame kind, see section 6 RFC 7540
 
@@ -64,6 +64,8 @@ package AWS.HTTP2.Frame is
    Padded_Flag      : constant Flags_Type;
    Priority_Flag    : constant Flags_Type;
 
+   subtype Length_Type is Byte_3 range 0 .. 2 ** 24 - 1;
+
    function Read (Sock : Net.Socket_Type'Class) return Object'Class;
 
    procedure Send (Sock : Net.Socket_Type'Class; O : Object'Class);
@@ -75,6 +77,12 @@ package AWS.HTTP2.Frame is
    function Kind (Self : Object) return Kind_Type;
 
    function Stream_Id (Self : Object) return HTTP2.Stream_Id;
+
+   function Flags (Self : Object) return Flags_Type;
+
+   function Length (Self : Object) return Length_Type;
+
+   procedure Dump (O : Object'Class);
 
 private
 
@@ -91,11 +99,11 @@ private
                       K_Priority      => 16#2#,
                       K_RST_Stream    => 16#3#,
                       K_Settings      => 16#4#,
-                      Push_Promise  => 16#5#,
-                      Ping          => 16#6#,
-                      GoAway        => 16#7#,
+                      K_Push_Promise  => 16#5#,
+                      K_Ping          => 16#6#,
+                      K_GoAway        => 16#7#,
                       K_Window_Update => 16#8#,
-                      Continuation  => 16#9#);
+                      K_Continuation  => 16#9#);
 
    for Error_Codes use (No_Error            => 16#0#,
                         Protocol_Error      => 16#1#,
@@ -111,8 +119,6 @@ private
                         Enhance_Your_CALM   => 16#B#,
                         Inadequate_Security => 16#C#,
                         HTTP_1_1_Required   => 16#D#);
-
-   subtype Length_Type is Byte_3 range 0 .. 2 ** 24 - 1;
 
    type Header is record
       Length    : Length_Type;
@@ -144,7 +150,7 @@ private
       Length    at 0 range 0 .. 23;
       Kind      at 0 range 24 .. 31;
       Flags     at 4 range 0 .. 7;
-      R         at 5 range 0 .. 0;
+      R         at 5 range 0 .. 0;  --  reserved
       Stream_Id at 5 range 1 .. 31;
    end record;
 
@@ -177,5 +183,11 @@ private
 
    function Stream_Id (Self : Object) return HTTP2.Stream_Id is
      (Self.Header.H.Stream_Id);
+
+   function Flags (Self : Object) return Flags_Type is
+     (Self.Header.H.Flags);
+
+   function Length (Self : Object) return Length_Type is
+     (Self.Header.H.Length);
 
 end AWS.HTTP2.Frame;

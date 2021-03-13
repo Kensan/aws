@@ -47,9 +47,11 @@ with AWS.Server.Status;
 with AWS.Status.Set;
 with AWS.Utils;
 
-with AWS.HTTP2.Frame;
+with AWS.HTTP2.Frame.List;
 with AWS.HTTP2.Message;
 with AWS.HTTP2.Stream;
+with AWS.HTTP2.Frame.Settings;
+with AWS.HTTP2.Frame.Window_Update;
 
 pragma Warnings (Off);
 
@@ -65,7 +67,14 @@ procedure Protocol_Handler_V2 (LA : in out Line_Attribute_Record) is
    use Ada.Streams;
 
    use AWS.Server.HTTP_Utils;
+
    use type HTTP2.Stream_Id;
+   use type HTTP2.Frame.Length_Type;
+   use all type HTTP2.Frame.Kind_Type;
+
+   CTRL_Stream : HTTP2.Stream.Object;
+
+   Answers : HTTP2.Frame.List.Object;
 
    procedure Handle_Control_Frame (Frame : HTTP2.Frame.Object'Class);
 
@@ -76,8 +85,53 @@ procedure Protocol_Handler_V2 (LA : in out Line_Attribute_Record) is
    --------------------------
 
    procedure Handle_Control_Frame (Frame : HTTP2.Frame.Object'Class) is
+
+      procedure Handle (Frame : HTTP2.Frame.Settings.Object);
+
+      procedure Handle (Frame : HTTP2.Frame.Window_Update.Object);
+
+      ------------
+      -- Handle --
+      ------------
+
+      procedure Handle (Frame : HTTP2.Frame.Settings.Object) is
+      begin
+         Put_Line ("@SETTINGS");
+
+         declare
+            SP : HTTP2.Frame.Settings.Payload;
+         begin
+            SP.Id := HTTP2.Frame.Settings.MAX_CONCURRENT_STREAMS;
+            SP.Value := 326;
+
+            Answers.Append
+              (HTTP2.Frame.Settings.Create
+                 (HTTP2.Frame.Settings.Set'(1 => SP)));
+         end;
+      end Handle;
+
+      procedure Handle (Frame : HTTP2.Frame.Window_Update.Object) is
+      begin
+         Put_Line ("@WINDOW_UPDTAE");
+      end Handle;
+
    begin
       Put_Line ("CTRL: " & Frame.Kind'Img);
+      Frame.Dump;
+
+      if Frame.Kind = K_Settings then
+         Handle (HTTP2.Frame.Settings.Object (Frame));
+
+      elsif Frame.Kind = K_Window_Update then
+         if Frame.Length = 4 then
+            Handle (HTTP2.Frame.Window_Update.Object (Frame));
+         else
+            --  ??? push an error frame into answer with FRAME_SIZE_ERROR
+            null;
+         end if;
+      end if;
+
+      --  CTRL_Stream.Push_Frame (Frame);
    end Handle_Control_Frame;
 
    --------------------
@@ -135,12 +189,17 @@ begin
    begin
       Net.Buffered.Read (Sock_Ptr.all, Preface);
 
-      if Preface /= Connection_Preface then
+      if Preface = Connection_Preface then
+         Put_Line ("OK connection preface");
+         Put_Line ("Switched in v2 protocol...");
+      else
          raise Constraint_Error with "connection preface not found";
       end if;
    end;
 
    For_Every_Frame : loop
+      --  Get frame
+
       declare
          use Ada.Streams;
          use type Response.Data_Mode;
@@ -154,10 +213,7 @@ begin
                           HTTP2.Frame.Read (Sock_Ptr.all);
          Stream_Id    : constant HTTP2.Stream_Id := Frame.Stream_Id;
       begin
-         Put_Line ("Switched in v2 protocol...");
          delay 1.0;
-
-         Response.Set.Mode (Error_Answer, Response.No_Data);
 
          if Stream_Id = 0 then
             Handle_Control_Frame (Frame);
@@ -170,6 +226,13 @@ begin
             end if;
          end if;
       end;
+
+      --  Send back frames if any waiting
+
+      while not Answers.Is_Empty loop
+         HTTP2.Frame.Send (Sock_Ptr.all, Answers.First_Element);
+         Answers.Delete_First;
+      end loop;
    end loop For_Every_Frame;
 
    --  Release memory for local objects

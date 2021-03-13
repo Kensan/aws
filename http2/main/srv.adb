@@ -283,7 +283,7 @@ begin
    Text_IO.Put_Line ("AWS " & AWS.Version);
    Text_IO.Put_Line ("Press Q to exit...");
 
-   AWS.Net.Log.Start (Write_Callback'Unrestricted_Access);
+--   AWS.Net.Log.Start (Write_Callback'Unrestricted_Access);
 
 --   Local_Check;
 
